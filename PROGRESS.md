@@ -214,26 +214,26 @@ returned 4 seasons with 25, 12, 22, and 28 episodes.
 Selection is frontend state; the mass actions get dedicated endpoints so a
 partial failure is reported honestly. There is no bulk edit.
 
-- [ ] Add a checkbox column to the Shares rows, plus a select-all box for the
+- [x] Add a checkbox column to the Shares rows, plus a select-all box for the
       loaded page.
-- [ ] Support shift-click range selection across the rows currently loaded.
-- [ ] Clear selection when the tab or Active/Inactive/All filter changes, after
+- [x] Support shift-click range selection across the rows currently loaded.
+- [x] Clear selection when the tab or Active/Inactive/All filter changes, after
       an action, and when the list is reloaded.
-- [ ] Add a persistent mass-action bar at the top of the Shares tab, under the
+- [x] Add a persistent mass-action bar at the top of the Shares tab, under the
       filter: select-all, "N selected", Revoke selected, Delete selected, Clear.
       Actions stay disabled until something is selected.
-- [ ] Mass revoke: `POST /api/admin/shares/bulk/revoke` with `{ "ids": [...] }`
+- [x] Mass revoke: `POST /api/admin/shares/bulk/revoke` with `{ "ids": [...] }`
       in one SQL statement, returning which ids changed.
-- [ ] Mass delete: `POST /api/admin/shares/bulk/delete`, allowed only for
+- [x] Mass delete: `POST /api/admin/shares/bulk/delete`, allowed only for
       inactive links. Cascades sessions and progress; audit rows keep their
       history because `share_id` is set NULL. Report skipped ids.
-- [ ] Per-share buttons next to each row: Copy link, Edit, Revoke. Revoke keeps
+- [x] Per-share buttons next to each row: Copy link, Edit, Revoke. Revoke keeps
       its inline confirm.
-- [ ] Individual edit opens a dialog using the existing
+- [x] Individual edit opens a dialog using the existing
       `PATCH /api/admin/shares/{id}`: extend expiry, change the play limit,
       change concurrent viewers, set or remove the password. Works from the
       detail sheet too.
-- [ ] Confirm before mass revoke and mass delete.
+- [x] Confirm before mass revoke and mass delete.
 
 Implementation notes:
 
@@ -258,6 +258,13 @@ Implementation notes:
 Done when: ticking a few shares and choosing Revoke or Delete does what the
 label says, shift-click selects the range, and each row can be edited or revoked
 on its own.
+
+Status: done. The Shares tab has a checkbox column, select-all, shift-click
+ranges, and a mass-action bar with revoke/delete plus a visible confirmation.
+Rows have Copy link, Edit, and Revoke; Edit is also reachable from the detail
+sheet. Bulk revoke terminates sessions; bulk delete removes only inactive links
+and reports skipped active ids. Verified live with three temporary shares:
+2 revoked, 2 deleted, the active one skipped, then cleaned up.
 
 ### Step 7 — Retention cleanup for stale links
 
@@ -335,3 +342,11 @@ window, while live and never-expiring links stay.
 - Step 5 done: top-level-only search, season/episode browse endpoints, and a
   lazy, cached tree with Share series / Share season / episode selection plus
   a no-seasons fallback. Verified against a one-season and a four-season show.
+- Fixed the password loop on plain-HTTP deployments: the session cookie was
+  always Secure, so browsers dropped it and every Play asked again. Secure now
+  follows TLS or X-Forwarded-Proto. Verified: cookie set without Secure over
+  HTTP, Play with the cookie returns 200, without it 401.
+- Step 6 done: row checkboxes, select-all, shift-click ranges, mass revoke and
+  delete endpoints/UI, per-row Edit/Revoke/Copy, and an edit dialog. Bulk
+  endpoints tested live with mixed active/inactive ids. Added handler tests for
+  bulk id validation.

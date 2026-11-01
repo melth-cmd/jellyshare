@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/melth-cmd/jellyfin-share-backend/internal/models"
 )
 
@@ -132,6 +133,33 @@ func (db *DB) CountShares(ctx context.Context) (total, active int, err error) {
 		return 0, 0, fmt.Errorf("failed to count shares: %w", err)
 	}
 	return total, active, nil
+}
+
+// RevokeShares revokes every id that is not already revoked and returns the
+// ids it changed. Ids that do not exist or were already revoked are simply not
+// in the result.
+func (db *DB) RevokeShares(ctx context.Context, ids []uuid.UUID) ([]uuid.UUID, error) {
+	query := `UPDATE shares SET revoked_at = NOW()
+		WHERE id = ANY($1) AND revoked_at IS NULL
+		RETURNING id`
+	revoked := []uuid.UUID{}
+	if err := db.SelectContext(ctx, &revoked, query, pq.Array(ids)); err != nil {
+		return nil, fmt.Errorf("failed to revoke shares: %w", err)
+	}
+	return revoked, nil
+}
+
+// DeleteInactiveShares permanently removes the ids that can no longer be
+// watched. Active ids are left alone even when the caller asks for them.
+func (db *DB) DeleteInactiveShares(ctx context.Context, ids []uuid.UUID) ([]uuid.UUID, error) {
+	query := `DELETE FROM shares
+		WHERE id = ANY($1) AND NOT (` + activeShareSQL + `)
+		RETURNING id`
+	deleted := []uuid.UUID{}
+	if err := db.SelectContext(ctx, &deleted, query, pq.Array(ids)); err != nil {
+		return nil, fmt.Errorf("failed to delete shares: %w", err)
+	}
+	return deleted, nil
 }
 
 func (db *DB) RevokeShare(ctx context.Context, id uuid.UUID) error {
