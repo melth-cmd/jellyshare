@@ -1,0 +1,380 @@
+package models
+
+import (
+	"database/sql"
+	"encoding/json"
+	"strconv"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+// NullTime is a nullable timestamp that marshals to a bare JSON timestamp or null,
+// instead of the {"Time":...,"Valid":...} shape sql.NullTime would produce. Clients
+// read this field directly, so the wire format has to stay a plain timestamp.
+type NullTime struct {
+	sql.NullTime
+}
+
+func (n NullTime) MarshalJSON() ([]byte, error) {
+	if !n.Valid {
+		return []byte("null"), nil
+	}
+	return json.Marshal(n.Time)
+}
+
+func (n *NullTime) UnmarshalJSON(b []byte) error {
+	if string(b) == "null" {
+		n.Valid = false
+		return nil
+	}
+	if err := json.Unmarshal(b, &n.Time); err != nil {
+		return err
+	}
+	n.Valid = true
+	return nil
+}
+
+type Share struct {
+	ID                       uuid.UUID      `db:"id" json:"id"`
+	PublicToken              string         `db:"public_token" json:"publicToken"`
+	JellyfinItemID           string         `db:"jellyfin_item_id" json:"jellyfinItemId"`
+	JellyfinUserID           string         `db:"jellyfin_user_id" json:"jellyfinUserId"`
+	Title                    string         `db:"title" json:"title"`
+	Overview                 sql.NullString `db:"overview" json:"overview,omitempty"`
+	RuntimeSeconds           sql.NullInt64  `db:"runtime_seconds" json:"runtimeSeconds,omitempty"`
+	PosterPath               sql.NullString `db:"poster_path" json:"posterPath,omitempty"`
+	BackdropPath             sql.NullString `db:"backdrop_path" json:"backdropPath,omitempty"`
+	ItemType                 string         `db:"item_type" json:"itemType"`
+	MaxTotalPlays            sql.NullInt64  `db:"max_total_plays" json:"maxTotalPlays,omitempty"`
+	MaxConcurrentViewers     sql.NullInt64  `db:"max_concurrent_viewers" json:"maxConcurrentViewers,omitempty"`
+	TotalPlays               int            `db:"total_plays" json:"totalPlays"`
+	CurrentConcurrentViewers int            `db:"current_concurrent_viewers" json:"currentConcurrentViewers"`
+	// ExpiresAt is NULL for a share that never expires.
+	ExpiresAt                NullTime       `db:"expires_at" json:"expiresAt"`
+	PasswordHash             sql.NullString `db:"password_hash" json:"-"`
+	CreatedAt                time.Time      `db:"created_at" json:"createdAt"`
+	// MaxVideoHeight / MaxVideoBitrate cap the quality of this share. NULL means the
+	// source decides, which is the default.
+	MaxVideoHeight           sql.NullInt64  `db:"max_video_height" json:"maxVideoHeight,omitempty"`
+	MaxVideoBitrate          sql.NullInt64  `db:"max_video_bitrate" json:"maxVideoBitrate,omitempty"`
+	// AllowDownload is the sharer's choice for this link; the server-wide setting
+	// can still switch downloads off for every link.
+	AllowDownload            bool           `db:"allow_download" json:"allowDownload"`
+	RevokedAt                sql.NullTime   `db:"revoked_at" json:"revokedAt,omitempty"`
+	LastActivityAt           sql.NullTime   `db:"last_activity_at" json:"lastActivityAt,omitempty"`
+}
+
+func (s *Share) IsExpired() bool {
+	if !s.ExpiresAt.Valid {
+		return false // never expires
+	}
+	return time.Now().After(s.ExpiresAt.Time)
+}
+
+// ExpiresAtPtr renders the expiry for JSON: nil (and thus null) when the share
+// never expires, so clients can distinguish "no expiry" from a zero timestamp.
+func (s *Share) ExpiresAtPtr() *time.Time {
+	if !s.ExpiresAt.Valid {
+		return nil
+	}
+	t := s.ExpiresAt.Time
+	return &t
+}
+
+func (s *Share) IsRevoked() bool {
+	return s.RevokedAt.Valid
+}
+
+// ShareGone is what a link that no longer opens says about itself: why, since
+// when, and which link it was, so the viewer can tell whoever shared it.
+type ShareGone struct {
+	Error   string    `json:"error"`
+	Reason  string    `json:"reason"` // "revoked" or "expired"
+	Title   string    `json:"title"`
+	// SeriesName is set by the handler for a season link, as on SharePublicInfo.
+	SeriesName string    `json:"seriesName,omitempty"`
+	EndedAt time.Time `json:"endedAt"`
+}
+
+// Gone returns why the share no longer opens, or nil while it still does. A
+// revoke is named over an expiry: it is the sharer's own decision, and the
+// more useful thing to hear.
+func (s *Share) Gone() *ShareGone {
+	switch {
+	case s.IsRevoked():
+		return &ShareGone{Error: "share is no longer available", Reason: "revoked", Title: s.Title, EndedAt: s.RevokedAt.Time}
+	case s.IsExpired():
+		return &ShareGone{Error: "share has expired", Reason: "expired", Title: s.Title, EndedAt: s.ExpiresAt.Time}
+	}
+	return nil
+}
+
+func (s *Share) IsValid() bool {
+	return !s.IsExpired() && !s.IsRevoked()
+}
+
+func (s *Share) RequiresPassword() bool {
+	return s.PasswordHash.Valid && s.PasswordHash.String != ""
+}
+
+func (s *Share) CanStartNewPlay() bool {
+	return !s.PlayLimitReached() && s.CanContinuePlay()
+}
+
+// PlayLimitReached reports whether the share's total-play budget is spent.
+func (s *Share) PlayLimitReached() bool {
+	return s.MaxTotalPlays.Valid && int64(s.TotalPlays) >= s.MaxTotalPlays.Int64
+}
+
+// DownloadsAllowed combines the sharer's choice with the server-wide switch.
+func (s *Share) DownloadsAllowed(serverAllows bool) bool {
+	return serverAllows && s.AllowDownload
+}
+
+// HasEpisodes reports whether the share is a season or series, whose episodes
+// are played and downloaded one by one.
+func (s *Share) HasEpisodes() bool {
+	return s.ItemType == "Season" || s.ItemType == "Series"
+}
+
+// CanContinuePlay is CanStartNewPlay without the total-play limit. An episode
+// started by autoplay carries on a viewing that was counted when it began, so it
+// must not be charged again - otherwise a link offered as "three plays" would
+// mean three episodes and die mid-season. Everything else still applies: the
+// share must be valid, and a continuation is still a viewer.
+func (s *Share) CanContinuePlay() bool {
+	if !s.IsValid() {
+		return false
+	}
+	if s.MaxConcurrentViewers.Valid && int64(s.CurrentConcurrentViewers) >= s.MaxConcurrentViewers.Int64 {
+		return false
+	}
+	return true
+}
+
+type CreateShareRequest struct {
+	JellyfinItemID       string  `json:"jellyfinItemId"`
+	JellyfinUserID       string  `json:"jellyfinUserId"`
+	MaxTotalPlays        *int    `json:"maxTotalPlays,omitempty"`
+	MaxConcurrentViewers *int    `json:"maxConcurrentViewers,omitempty"`
+	ExpiresInMinutes     int     `json:"expiresInMinutes"`
+	// NeverExpires overrides ExpiresInMinutes and stores a NULL expiry.
+	NeverExpires         bool    `json:"neverExpires,omitempty"`
+	// MaxVideoHeight caps the picture (720 for 720p and so on); MaxVideoBitrate caps
+	// the transcode target. Both only ever lower what the source would give.
+	MaxVideoHeight       *int    `json:"maxVideoHeight,omitempty"`
+	MaxVideoBitrate      *int    `json:"maxVideoBitrate,omitempty"`
+	Password             *string `json:"password,omitempty"`
+	// AllowDownload is a pointer so an older client that does not send it gets
+	// the default - downloads on - rather than false.
+	AllowDownload        *bool   `json:"allowDownload,omitempty"`
+}
+
+type CreateShareResponse struct {
+	ShareID              uuid.UUID `json:"shareId"`
+	PublicURL            string    `json:"publicUrl"`
+	Token                string    `json:"token"`
+	ExpiresAt            *time.Time `json:"expiresAt"`
+	MaxTotalPlays        *int      `json:"maxTotalPlays,omitempty"`
+	MaxConcurrentViewers *int      `json:"maxConcurrentViewers,omitempty"`
+}
+
+type AudioTrack struct {
+	Index        int    `json:"index"`
+	Language     string `json:"language,omitempty"`
+	DisplayTitle string `json:"displayTitle,omitempty"`
+	Codec        string `json:"codec,omitempty"`
+	Channels     int    `json:"channels,omitempty"`
+	IsDefault    bool   `json:"isDefault"`
+}
+
+type SubtitleTrack struct {
+	Index        int    `json:"index"`
+	Language     string `json:"language,omitempty"`
+	DisplayTitle string `json:"displayTitle,omitempty"`
+	Codec        string `json:"codec,omitempty"`
+	IsDefault    bool   `json:"isDefault"`
+	IsForced     bool   `json:"isForced"`
+	// IsText marks a subtitle that can be delivered as a WebVTT sidecar. Image
+	// subtitles must be burned in, which forces a video transcode.
+	IsText       bool   `json:"isText"`
+}
+
+type SharePublicInfo struct {
+	Title                    string    `json:"title"`
+	// SeriesName names the show a season share belongs to. Jellyfin titles a
+	// season "Season 1"; on its own that does not say which show.
+	SeriesName               string    `json:"seriesName,omitempty"`
+	Overview                 string    `json:"overview,omitempty"`
+	Tagline                  string    `json:"tagline,omitempty"`
+	RuntimeSeconds           int64     `json:"runtimeSeconds,omitempty"`
+	PosterURL                string    `json:"posterUrl,omitempty"`
+	BackdropURL              string    `json:"backdropUrl,omitempty"`
+	LogoURL                  string    `json:"logoUrl,omitempty"`
+	ItemType                 string    `json:"itemType"`
+	ExpiresAt                *time.Time `json:"expiresAt"`
+	RequiresPassword         bool      `json:"requiresPassword"`
+	// Locked is true while the password has not been entered in this browser.
+	// The response then carries only the title, artwork and terms.
+	Locked                   bool      `json:"locked"`
+	MaxTotalPlays            *int64    `json:"maxTotalPlays,omitempty"`
+	TotalPlays               int       `json:"totalPlays"`
+	MaxConcurrentViewers     *int64    `json:"maxConcurrentViewers,omitempty"`
+	CurrentConcurrentViewers int       `json:"currentConcurrentViewers"`
+	// AllowDownload tells the page whether to offer downloads at all.
+	AllowDownload            bool      `json:"allowDownload"`
+
+	// Extended metadata (fetched live from Jellyfin)
+	Year            int               `json:"year,omitempty"`
+	OfficialRating  string            `json:"officialRating,omitempty"`
+	CommunityRating float64           `json:"communityRating,omitempty"`
+	CriticRating    int               `json:"criticRating,omitempty"`
+	Genres          []string          `json:"genres,omitempty"`
+	Studios         []string          `json:"studios,omitempty"`
+	Directors       []string          `json:"directors,omitempty"`
+	Actors          []ActorInfo       `json:"actors,omitempty"`
+	VideoQuality    *VideoQualityInfo `json:"videoQuality,omitempty"`
+	// DownloadBytes is the size of the file a download hands over, so a viewer
+	// on mobile data knows what a tap on Download costs.
+	DownloadBytes   int64             `json:"downloadBytes,omitempty"`
+	AudioTracks     []AudioTrack      `json:"audioTracks,omitempty"`
+	SubtitleTracks  []SubtitleTrack   `json:"subtitleTracks,omitempty"`
+}
+
+// WithholdDetails strips what a password link should not say before its
+// password: the synopsis, credits, ratings, file and track details. What stays
+// is what the link points at - title and artwork - and its terms, so a viewer
+// still knows what they were sent and what it allows.
+func (info *SharePublicInfo) WithholdDetails() {
+	info.Locked = true
+	info.Overview = ""
+	info.Tagline = ""
+	info.RuntimeSeconds = 0
+	info.Year = 0
+	info.OfficialRating = ""
+	info.CommunityRating = 0
+	info.CriticRating = 0
+	info.Genres = nil
+	info.Studios = nil
+	info.Directors = nil
+	info.Actors = nil
+	info.VideoQuality = nil
+	info.DownloadBytes = 0
+	info.AudioTracks = nil
+	info.SubtitleTracks = nil
+}
+
+// DownloadResponse carries the URL the browser fetches the file from. It is
+// relative for the same reason the subtitle URL is: the page may have been
+// reached on another hostname than PublicBaseURL.
+type DownloadResponse struct {
+	DownloadURL string `json:"downloadUrl"`
+}
+
+type ActorInfo struct {
+	Name string `json:"name"`
+	Role string `json:"role,omitempty"`
+}
+
+type VideoQualityInfo struct {
+	Resolution string `json:"resolution"`
+	Width      int    `json:"width"`
+	Height     int    `json:"height"`
+	Codec      string `json:"codec,omitempty"`
+	Container  string `json:"container,omitempty"`
+	Bitrate    int    `json:"bitrate,omitempty"`
+	AudioCodec string `json:"audioCodec,omitempty"`
+}
+
+func (s *Share) ToPublicInfo(baseURL string) SharePublicInfo {
+	info := SharePublicInfo{
+		Title:                    s.Title,
+		ItemType:                 s.ItemType,
+		ExpiresAt:                s.ExpiresAtPtr(),
+		RequiresPassword:         s.RequiresPassword(),
+		TotalPlays:               s.TotalPlays,
+		CurrentConcurrentViewers: s.CurrentConcurrentViewers,
+	}
+
+	if s.Overview.Valid {
+		info.Overview = s.Overview.String
+	}
+	if s.RuntimeSeconds.Valid {
+		info.RuntimeSeconds = s.RuntimeSeconds.Int64
+	}
+	if s.PosterPath.Valid && s.PosterPath.String != "" {
+		info.PosterURL = baseURL + "/api/public/images/" + s.PublicToken + "/poster"
+	}
+	if s.BackdropPath.Valid && s.BackdropPath.String != "" {
+		info.BackdropURL = baseURL + "/api/public/images/" + s.PublicToken + "/backdrop"
+	}
+	if s.MaxTotalPlays.Valid {
+		info.MaxTotalPlays = &s.MaxTotalPlays.Int64
+	}
+	if s.MaxConcurrentViewers.Valid {
+		info.MaxConcurrentViewers = &s.MaxConcurrentViewers.Int64
+	}
+
+	return info
+}
+
+// The admin index loads links a page at a time. 50 rows is a long screen of
+// the index; 200 caps what one request may ask for.
+const (
+	DefaultPageSize = 50
+	MaxPageSize     = 200
+)
+
+// PageCursor is the last link a page ended on; the next page starts below it.
+// Paging by position instead of by offset keeps the pages steady while links
+// are created, or revoked ones cleaned up, between two loads.
+type PageCursor struct {
+	CreatedAt time.Time
+	ID        uuid.UUID
+}
+
+// ParsePage reads a page request: its size, and the link it continues after.
+// Anything missing, unreadable or out of range falls back to the first page at
+// the default size instead of an error - the index should always show something.
+func ParsePage(limit, beforeCreatedAt, beforeID string) (int, *PageCursor) {
+	l, err := strconv.Atoi(limit)
+	if err != nil || l <= 0 {
+		l = DefaultPageSize
+	}
+	l = min(l, MaxPageSize)
+	at, errAt := time.Parse(time.RFC3339Nano, beforeCreatedAt)
+	id, errID := uuid.Parse(beforeID)
+	if errAt != nil || errID != nil {
+		return l, nil
+	}
+	return l, &PageCursor{CreatedAt: at, ID: id}
+}
+
+type ShareListItem struct {
+	ID                       uuid.UUID  `db:"id" json:"id"`
+	PublicToken              string     `db:"public_token" json:"publicToken"`
+	Title                    string     `db:"title" json:"title"`
+	ItemType                 string     `db:"item_type" json:"itemType"`
+	TotalPlays               int        `db:"total_plays" json:"totalPlays"`
+	CurrentConcurrentViewers int        `db:"current_concurrent_viewers" json:"currentConcurrentViewers"`
+	MaxTotalPlays            *int64     `db:"max_total_plays" json:"maxTotalPlays,omitempty"`
+	MaxConcurrentViewers     *int64     `db:"max_concurrent_viewers" json:"maxConcurrentViewers,omitempty"`
+	ExpiresAt                *time.Time  `db:"expires_at" json:"expiresAt"`
+	CreatedAt                time.Time  `db:"created_at" json:"createdAt"`
+	RevokedAt                *time.Time `db:"revoked_at" json:"revokedAt,omitempty"`
+	MaxVideoHeight           *int64     `json:"maxVideoHeight,omitempty"`
+	HasPassword              bool       `json:"hasPassword"`
+	AllowDownload            bool       `json:"allowDownload"`
+	// PublicURL is built from PublicBaseURL, not from the caller's view of the
+	// backend, so clients never have to reconstruct it from their own base URL.
+	PublicURL string `json:"publicUrl"`
+}
+
+type UpdateShareRequest struct {
+	MaxTotalPlays        *int   `json:"maxTotalPlays,omitempty"`
+	MaxConcurrentViewers *int   `json:"maxConcurrentViewers,omitempty"`
+	ExtendMinutes        *int   `json:"extendMinutes,omitempty"`
+	Password             *string `json:"password,omitempty"`
+	RemovePassword       bool   `json:"removePassword,omitempty"`
+}
