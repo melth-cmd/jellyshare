@@ -30,6 +30,9 @@ type Config struct {
 	// AllowDownloads lets viewers save the original file - and, for a season or
 	// series, every episode as one ZIP. A download is charged as one play.
 	AllowDownloads bool
+	// ShareRetentionDays deletes links this many days after they expired or were
+	// revoked. Zero keeps them forever.
+	ShareRetentionDays int
 }
 
 func Load() *Config {
@@ -48,6 +51,7 @@ func Load() *Config {
 		StreamVideoCodec:        getEnvAllowEmpty("JFSHARE_STREAM_VIDEO_CODEC", "h264"),
 		StreamAudioCodec:        getEnvAllowEmpty("JFSHARE_STREAM_AUDIO_CODEC", "aac"),
 		AllowDownloads:          getEnvBool("JFSHARE_ALLOW_DOWNLOADS", true),
+		ShareRetentionDays:      getEnvInt("JFSHARE_SHARE_RETENTION_DAYS", 365),
 	}
 }
 

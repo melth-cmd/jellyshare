@@ -287,12 +287,16 @@ func (db *DB) GetActiveSharesCount(ctx context.Context) (int, error) {
 	return count, err
 }
 
-func (db *DB) CleanupExpiredShares(ctx context.Context, olderThan time.Duration) (int64, error) {
-	cutoff := time.Now().Add(-olderThan)
-	query := `DELETE FROM shares WHERE expires_at IS NOT NULL AND expires_at < $1 AND revoked_at IS NOT NULL`
+// DeleteStaleShares removes links that have been expired or revoked for longer
+// than retention. Live links and links that never expire are never touched.
+func (db *DB) DeleteStaleShares(ctx context.Context, retention time.Duration) (int64, error) {
+	cutoff := time.Now().Add(-retention)
+	query := `DELETE FROM shares
+		WHERE (expires_at IS NOT NULL AND expires_at < $1)
+		   OR (revoked_at IS NOT NULL AND revoked_at < $1)`
 	result, err := db.ExecContext(ctx, query, cutoff)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to delete stale shares: %w", err)
 	}
 	return result.RowsAffected()
 }

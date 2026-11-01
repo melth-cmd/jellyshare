@@ -198,6 +198,7 @@ Navigate to `http://localhost:8097/admin` and enter your `BACKEND_API_KEY`.
 | `JFSHARE_STREAM_VIDEO_CODEC` | Fallback video codec, used when the viewer's browser cannot decode the source. A source that already matches is stream-copied, not re-encoded. Empty sends no preference, which lets AV1/HEVC reach the browser untouched | `h264` |
 | `JFSHARE_STREAM_AUDIO_CODEC` | Audio codec the share page can play, same rule | `aac` |
 | `JFSHARE_ALLOW_DOWNLOADS` | Offer downloads of the original file, and of a season or series as one ZIP. Each download counts as one play | `true` |
+| `JFSHARE_SHARE_RETENTION_DAYS` | Days after a link expired or was revoked before its row is deleted. Live and never-expiring links are never deleted. `0` keeps stale rows forever | `365` |
 
 ## API Reference
 
@@ -501,7 +502,8 @@ cd web && npm run build
 - **Bcrypt password hashing** - Share passwords are securely hashed
 - **Rate limiting** - Public endpoints are rate-limited to prevent abuse
 - **IP hashing** - Client IPs are hashed for privacy in audit logs
-- **Automatic session cleanup** - Stale sessions are automatically terminated
+- **Automatic session cleanup** - Stale sessions are automatically terminated; links
+  are deleted after `JFSHARE_SHARE_RETENTION_DAYS` days once expired or revoked
 - **Credentials stay server-side** - The Jellyfin key travels as a request header, never
   in a URL that could be echoed back into a manifest the viewer receives
 - **Downloads are ticketed** - The item a download serves is checked against the share
