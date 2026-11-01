@@ -101,6 +101,8 @@ func main() {
 		r.Patch("/shares/{id}", adminHandler.UpdateShare)
 		r.Get("/shares/{id}/analytics", adminHandler.GetShareAnalytics)
 		r.Get("/stats", adminHandler.GetStats)
+		r.Get("/jellyfin/items", adminHandler.SearchLibrary)
+		r.Get("/jellyfin/items/{id}/poster", adminHandler.GetItemPoster)
 	})
 
 	// Public API. The calls a viewer makes by hand share a per-IP rate limit.

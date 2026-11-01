@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -62,5 +63,101 @@ func TestEpisodeQueriesAskOnlyForTheFieldsTheyNeed(t *testing.T) {
 	}
 	if fields != "" {
 		t.Errorf("GetEpisodesFor asked for Fields=%q, want none", fields)
+	}
+}
+
+func TestSearchItemsQueriesLibraryAndMapsResults(t *testing.T) {
+	var got url.Values
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r.URL.Query()
+		if r.URL.Path != "/Users/u/Items" {
+			t.Errorf("path = %q, want /Users/u/Items", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"Items":[
+			{"Id":"m1","Name":"Alien","Type":"Movie","ProductionYear":1979,"RunTimeTicks":70200000000,"ImageTags":{"Primary":"tag"}},
+			{"Id":"s1","Name":"Alien","Type":"Series","ProductionYear":2025},
+			{"Id":"se1","Name":"Season 1","Type":"Season","IndexNumber":1},
+			{"Id":"e1","Name":"Neverland","Type":"Episode","SeriesName":"Alien","SeasonName":"Season 1","ParentIndexNumber":1,"IndexNumber":3}
+		]}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, "key")
+	c.userID = "u"
+	items, err := c.SearchItems(context.Background(), "alien", 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Get("SearchTerm") != "alien" {
+		t.Errorf("SearchTerm = %q, want alien", got.Get("SearchTerm"))
+	}
+	if got.Get("Limit") != "7" {
+		t.Errorf("Limit = %q, want 7", got.Get("Limit"))
+	}
+	if got.Get("SortBy") != "SortName" {
+		t.Errorf("SortBy = %q, want SortName", got.Get("SortBy"))
+	}
+	if types := got.Get("IncludeItemTypes"); !strings.Contains(types, "Movie") || !strings.Contains(types, "Episode") {
+		t.Errorf("IncludeItemTypes = %q", types)
+	}
+	if fields := got.Get("Fields"); !strings.Contains(fields, "Overview") || !strings.Contains(fields, "ImageTags") {
+		t.Errorf("Fields = %q", fields)
+	}
+
+	if len(items) != 4 {
+		t.Fatalf("got %d items, want 4", len(items))
+	}
+	if items[0].Year != 1979 || !items[0].HasPoster || items[0].RuntimeSeconds != 7020 {
+		t.Errorf("movie mapped wrong: %+v", items[0])
+	}
+	if items[2].SeasonNumber != 1 {
+		t.Errorf("season number = %d, want 1", items[2].SeasonNumber)
+	}
+	ep := items[3]
+	if ep.SeriesName != "Alien" || ep.SeasonName != "Season 1" || ep.SeasonNumber != 1 || ep.EpisodeNumber != 3 {
+		t.Errorf("episode mapped wrong: %+v", ep)
+	}
+}
+
+func TestSearchItemsEmptyQueryListsRecentItems(t *testing.T) {
+	var got url.Values
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r.URL.Query()
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"Items":[]}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, "key")
+	c.userID = "u"
+	items, err := c.SearchItems(context.Background(), "", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 0 {
+		t.Errorf("got %d items, want none", len(items))
+	}
+	if got.Get("SearchTerm") != "" {
+		t.Errorf("SearchTerm = %q, want none", got.Get("SearchTerm"))
+	}
+	if got.Get("SortBy") != "DateCreated" || got.Get("SortOrder") != "Descending" {
+		t.Errorf("SortBy/SortOrder = %q/%q", got.Get("SortBy"), got.Get("SortOrder"))
+	}
+	if got.Get("Limit") != "20" {
+		t.Errorf("Limit = %q, want the default 20", got.Get("Limit"))
+	}
+}
+
+func TestSearchItemsReportsJellyfinErrors(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "nope", http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, "key")
+	c.userID = "u"
+	if _, err := c.SearchItems(context.Background(), "alien", 5); err == nil {
+		t.Fatal("expected an error")
 	}
 }
