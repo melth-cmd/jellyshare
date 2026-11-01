@@ -91,17 +91,22 @@ without the admin key. Client tests cover query building and field mapping.
 
 ### Step 2 — Admin shell and tabs
 
-- [ ] Split `AdminDashboard.svelte` into a shell plus a shares panel and a create
-      panel, without rewriting the existing list/detail behavior.
-- [ ] Replace the current top pill with a wider bar: wordmark on the left, tab
+- [x] Split out `CreatePanel.svelte`; the shares index stays in
+      `AdminDashboard.svelte` for now, without rewriting its list/detail behavior.
+- [x] Replace the current top pill with a wider bar: wordmark on the left, tab
       buttons on the right, then refresh and sign out.
-- [ ] Style the tabs to match the existing design tokens.
-- [ ] Keep the selected tab in session state; do not lose it on refresh.
-- [ ] On mobile, keep the bar usable (tabs wrap or collapse; counts may hide as
+- [x] Style the tabs to match the existing design tokens.
+- [x] Keep the selected tab in session state; do not lose it on refresh.
+- [x] On mobile, keep the bar usable (tabs wrap or collapse; counts may hide as
       they already do).
 
 Done when: the admin can switch between Create and Shares freely and the bar
 looks right on desktop and phone.
+
+Status: done. The pill has Create and Shares tab buttons before refresh and sign
+out, the selected tab survives a reload via `sessionStorage`, and on narrow
+screens the wordmark text and link count give way to the tabs and actions.
+`CreatePanel` is a placeholder until Step 4.
 
 ### Step 3 — Shares tab: Active / Inactive / All
 
@@ -173,3 +178,5 @@ existing public share page.
 - Verified hot reload for Go and Svelte and synced the dev database.
 - Step 1 done: `SearchItems` in the Jellyfin client, `GET /api/admin/jellyfin/items`
   and a poster proxy, plus client and handler tests.
+- Step 2 done: Create/Shares tabs in the top pill, `CreatePanel` placeholder, and
+  tab state kept in `sessionStorage`. Frontend build passes.

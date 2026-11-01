@@ -1,8 +1,13 @@
 <script>
   import BrandMark from './BrandMark.svelte';
+  import CreatePanel from './CreatePanel.svelte';
   import { onMount, tick, createEventDispatcher } from 'svelte';
 
   export let apiKey;
+
+  const TAB_KEY = 'jfshare_admin_tab';
+  let activeTab = 'shares';
+  let createPanel;
 
   const dispatch = createEventDispatcher();
 
@@ -31,9 +36,21 @@
   let copyTimer;
 
   onMount(() => {
+    const savedTab = sessionStorage.getItem(TAB_KEY);
+    if (savedTab === 'create' || savedTab === 'shares') activeTab = savedTab;
     loadShares();
     return () => clearTimeout(copyTimer);
   });
+
+  function setTab(tab) {
+    activeTab = tab;
+    sessionStorage.setItem(TAB_KEY, tab);
+  }
+
+  function refreshCurrent() {
+    if (activeTab === 'shares') loadShares();
+    else createPanel?.reload();
+  }
 
   // The next page continues below the last link held, not at a row number, so
   // links created or cleaned up in between cannot shift or repeat rows.
@@ -219,9 +236,29 @@
 
 <!-- N5 · Floating pill. Content-sized, visibly detached, blurred over the canvas. -->
 <nav class="pill" aria-label="Admin">
-  <span class="pill__wordmark"><BrandMark />Jellyfin Share</span>
+  <span class="pill__wordmark"><BrandMark /><span class="pill__name">Jellyfin Share</span></span>
   <span class="pill__count" aria-live="polite">{total} {total === 1 ? 'link' : 'links'}</span>
-  <button class="pill__icon" on:click={loadShares} disabled={loading} aria-label="Reload the index">
+  <div class="pill__tabs" role="tablist" aria-label="Admin sections">
+    <button
+      class="pill__tab"
+      class:pill__tab--active={activeTab === 'create'}
+      id="tab-create"
+      role="tab"
+      aria-selected={activeTab === 'create'}
+      aria-controls="panel-create"
+      on:click={() => setTab('create')}
+    >Create</button>
+    <button
+      class="pill__tab"
+      class:pill__tab--active={activeTab === 'shares'}
+      id="tab-shares"
+      role="tab"
+      aria-selected={activeTab === 'shares'}
+      aria-controls="panel-shares"
+      on:click={() => setTab('shares')}
+    >Shares</button>
+  </div>
+  <button class="pill__icon" on:click={refreshCurrent} disabled={loading || activeTab === 'create'} aria-label="Reload">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
       <path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 01-9 9 9.75 9.75 0 01-6.74-2.74L3 16M3 21v-5h5"/>
     </svg>
@@ -230,7 +267,8 @@
 </nav>
 
 <div class="admin bloom-ground">
-  <main class="index">
+  {#if activeTab === 'shares'}
+  <main class="index" id="panel-shares" role="tabpanel" aria-labelledby="tab-shares">
     <p class="index__lede">
       Every link you have handed out, and what it is doing right now.
       {#if !loading && !error && shares.length > 0}
@@ -251,7 +289,7 @@
     {:else if shares.length === 0}
       <div class="state">
         <p class="state__head">No links yet.</p>
-        <p>A link appears here the moment someone shares an item from Jellyfin.</p>
+        <p>Create one from the Create tab and it will appear here.</p>
       </div>
     {:else}
       {#if revokeError}
@@ -320,6 +358,11 @@
       {#if moreError}<p class="banner" role="alert">{moreError}</p>{/if}
     {/if}
   </main>
+  {:else}
+    <div id="panel-create" role="tabpanel" aria-labelledby="tab-create">
+      <CreatePanel {apiKey} bind:this={createPanel} />
+    </div>
+  {/if}
 
   <!-- Ft4 · Dense colophon -->
   <footer class="colophon">
@@ -462,6 +505,40 @@
     color: var(--color-muted);
     white-space: nowrap;
   }
+
+  .pill__tabs {
+    display: inline-flex;
+    gap: 0.125rem;
+    padding: 0.15rem;
+    background: var(--color-paper-3);
+    border-radius: var(--radius-pill);
+  }
+
+  .pill__tab {
+    height: 1.95rem;
+    padding-inline: var(--space-sm);
+    background: none;
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    white-space: nowrap;
+    border: none;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: background-color var(--dur-micro) var(--ease-out),
+                color var(--dur-micro) var(--ease-out);
+  }
+
+  .pill__tab--active {
+    background: var(--color-paper-2);
+    color: var(--color-ink);
+  }
+
+  @media (hover: hover) {
+    .pill__tab:hover:not(.pill__tab--active) { color: var(--color-ink); }
+  }
+
+  .pill__tab:active { transform: translateY(1px); }
 
   .pill__icon {
     display: grid;
@@ -881,9 +958,13 @@
     .spec > div { grid-template-columns: minmax(0, 1fr); gap: var(--space-2xs); }
   }
 
-  @media (max-width: 40rem) {
+  @media (max-width: 48rem) {
     .pill { gap: var(--space-xs); padding-left: var(--space-sm); }
-    .pill__count { display: none; }
+    .pill__count, .pill__name { display: none; }
     .pill__wordmark { font-size: var(--text-base); }
+  }
+
+  @media (max-width: 30rem) {
+    .pill__tab { padding-inline: var(--space-xs); }
   }
 </style>
