@@ -257,9 +257,9 @@ X-Backend-Key: your-api-key
 ```
 
 Add `?jellyfinUserId=...` to scope the call to one owner: the share is only revoked
-if it belongs to that user, otherwise the call is refused with 403. The plugin uses
-this so one Jellyfin user cannot revoke another user's share. Omitting it keeps full
-admin reach. The same applies to `GET /api/admin/shares/{id}/analytics`.
+if it belongs to that user, otherwise the call is refused with 403. Use this to keep
+one Jellyfin user from revoking another user's share. Omitting it keeps full admin
+reach. The same applies to `GET /api/admin/shares/{id}/analytics`.
 
 #### Update Share
 ```http
@@ -512,14 +512,10 @@ cd web && npm run build
   track selection are resolved once when playback starts. The proxy never takes them
   from a request, so a share link cannot be pointed at another item
 
-## Companion Plugin
-
-For seamless integration, install the [Jellyfin Share Plugin](https://github.com/stanislavhannes/jellyfin-share-plugin) to create share links directly from the Jellyfin UI.
-
 ## Notable changes
 
-Every item below was reproduced against a live Jellyfin before being fixed; the
-numbers are measured.
+These changes are included in this build. Every item was reproduced against a live
+Jellyfin before being fixed; the numbers are measured.
 
 **Security**
 

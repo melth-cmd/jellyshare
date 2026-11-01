@@ -9,11 +9,9 @@ web
 ## Users
 
 - **Sharer.** Someone who self-hosts Jellyfin and wants to hand a film, episode,
-  season or series to a person outside their server. They usually create the link
-  from the Jellyfin UI with the companion plugin
-  ([jellyfin-share-plugin](https://github.com/stanislavhannes/jellyfin-share-plugin))
-  and use `/admin` to see, check and revoke the links they have handed out. They
-  sign in to `/admin` with the backend API key, not a Jellyfin account.
+  season or series to a person outside their server. They create links through the
+  admin API and use `/admin` to see, check and revoke the links they have handed
+  out. They sign in to `/admin` with the backend API key, not a Jellyfin account.
 - **Viewer.** A friend or family member with no Jellyfin account, often not
   technical, who opens the link on whatever device they have: a phone, a laptop,
   sometimes a browser they then cast to a TV from. Their job is to start watching,
@@ -49,9 +47,8 @@ These are in priority order. When two of them conflict, the higher one wins.
 
 ## Operating Context
 
-- Shares are created in Jellyfin through the plugin or through the admin API
-  (`POST /api/admin/shares` with `X-Backend-Key`). The web `/admin` surface lists,
-  inspects and revokes them.
+- Shares are created through the admin API (`POST /api/admin/shares` with
+  `X-Backend-Key`). The web `/admin` surface lists, inspects and revokes them.
 - Viewers arrive from a link sent over chat or email, often on a phone, and may
   hand off to a TV: Google Cast works in Chromium browsers only, AirPlay through
   Safari's own player control, and Firefox has no casting route.

@@ -45,7 +45,7 @@ func (h *AdminHandler) CreateShare(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.ExpiresInMinutes <= 0 {
-		req.ExpiresInMinutes = 30 * 1440 // Default 30 days, the same as the plugin's
+		req.ExpiresInMinutes = 30 * 1440 // Default 30 days.
 	}
 
 	// NeverExpires stores a NULL expiry; ExpiresInMinutes is ignored in that case.
@@ -160,7 +160,7 @@ func (h *AdminHandler) ListShares(w http.ResponseWriter, r *http.Request) {
 	total, live, hasMore := 0, 0, false
 
 	if jellyfinUserID != "" {
-		// A user's own links - the plugin's view - come back whole.
+		// A user's own links come back whole.
 		shares, err = h.db.GetSharesByUser(r.Context(), jellyfinUserID)
 	} else {
 		// The index loads a page at a time, newest first, continuing below the
@@ -285,7 +285,7 @@ func (h *AdminHandler) RevokeShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// A caller may scope the action to an owner. The plugin does this so one
+	// A caller may scope the action to an owner so one
 	// Jellyfin user cannot revoke another user's share by its id; a caller holding
 	// the backend key and omitting it keeps full admin reach.
 	if !h.ownedBy(r, id) {
