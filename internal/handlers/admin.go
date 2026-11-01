@@ -39,8 +39,17 @@ func (h *AdminHandler) CreateShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.JellyfinItemID == "" || req.JellyfinUserID == "" {
-		writeError(w, http.StatusBadRequest, "jellyfinItemId and jellyfinUserId are required")
+	if req.JellyfinItemID == "" {
+		writeError(w, http.StatusBadRequest, "jellyfinItemId is required")
+		return
+	}
+	// The admin UI shares as the account the backend already resolved, so a
+	// caller may leave the owner out.
+	if req.JellyfinUserID == "" {
+		req.JellyfinUserID = h.jf.UserID()
+	}
+	if req.JellyfinUserID == "" {
+		writeError(w, http.StatusServiceUnavailable, "no Jellyfin user available")
 		return
 	}
 

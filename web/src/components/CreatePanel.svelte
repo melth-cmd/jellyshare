@@ -1,8 +1,253 @@
 <script>
+  import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+  import PosterThumb from './PosterThumb.svelte';
+  import { copyText } from '../clipboard.js';
+
   export let apiKey;
 
-  // Filled in Step 4. The shell calls this when Refresh is pressed on this tab.
-  export function reload() {}
+  const dispatch = createEventDispatcher();
+
+  const EXPIRY = [
+    { value: '1440', label: '24 h' },
+    { value: '10080', label: '7 days' },
+    { value: '43200', label: '30 days' },
+    { value: 'never', label: 'Never' },
+    { value: 'custom', label: 'Custom' }
+  ];
+
+  const HEIGHTS = [
+    { value: '', label: 'Auto' },
+    { value: '1080', label: '1080p' },
+    { value: '720', label: '720p' },
+    { value: '480', label: '480p' },
+    { value: '360', label: '360p' }
+  ];
+
+  const BITRATES = [
+    { value: '', label: 'Auto' },
+    { value: '20000000', label: '20 Mbps' },
+    { value: '12000000', label: '12 Mbps' },
+    { value: '8000000', label: '8 Mbps' },
+    { value: '4000000', label: '4 Mbps' },
+    { value: '2000000', label: '2 Mbps' }
+  ];
+
+  const absoluteTime = new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  });
+
+  let selectedItem = null;
+  let searchQuery = '';
+  let results = [];
+  let searching = false;
+  let searchError = '';
+  let searchGeneration = 0;
+  let searchTimer;
+
+  let expiryChoice = '43200';
+  let customDays = '30';
+  let maxPlays = '';
+  let maxConcurrent = '';
+  let maxHeight = '';
+  let maxBitrate = '';
+  let password = '';
+  let allowDownload = true;
+
+  let formError = '';
+  let submitting = false;
+  let created = null;
+  let copied = false;
+  let copyTimer;
+
+  onMount(() => {
+    runSearch('');
+    return () => {
+      clearTimeout(searchTimer);
+      clearTimeout(copyTimer);
+    };
+  });
+
+  export function reload() {
+    if (!created) runSearch(searchQuery);
+  }
+
+  function onSearchInput() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => runSearch(searchQuery), 300);
+  }
+
+  async function runSearch(query) {
+    const generation = ++searchGeneration;
+    searching = true;
+    searchError = '';
+
+    try {
+      const params = new URLSearchParams({ limit: '20' });
+      const trimmed = query.trim();
+      if (trimmed) params.set('q', trimmed);
+
+      const response = await fetch(`/api/admin/jellyfin/items?${params}`, {
+        headers: { 'X-Backend-Key': apiKey }
+      });
+      if (!response.ok) throw new Error('search failed');
+      const data = await response.json();
+      if (generation !== searchGeneration) return;
+      results = data.items || [];
+    } catch (e) {
+      if (generation === searchGeneration) {
+        results = [];
+        searchError = 'Couldn’t search the Jellyfin library. Try again.';
+      }
+    } finally {
+      if (generation === searchGeneration) searching = false;
+    }
+  }
+
+  function choose(item) {
+    selectedItem = item;
+    formError = '';
+  }
+
+  function changeItem() {
+    selectedItem = null;
+    formError = '';
+    if (results.length === 0) runSearch(searchQuery);
+  }
+
+  function pad(value) {
+    return String(value).padStart(2, '0');
+  }
+
+  function itemContext(item) {
+    if (item.type === 'Episode') {
+      const parts = [];
+      if (item.seriesName) parts.push(item.seriesName);
+      if (item.seasonNumber) parts.push(`S${pad(item.seasonNumber)}E${pad(item.episodeNumber || 0)}`);
+      return parts.join(' · ');
+    }
+    if (item.type === 'Season') {
+      return [item.seriesName, item.seasonNumber ? `Season ${item.seasonNumber}` : '']
+        .filter(Boolean)
+        .join(' · ');
+    }
+    return [item.type, item.year].filter(Boolean).join(' · ');
+  }
+
+  function formatRuntime(seconds) {
+    if (!seconds) return '';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.round((seconds % 3600) / 60);
+    return hours ? `${hours} h ${minutes} min` : `${minutes} min`;
+  }
+
+  function formatDate(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '—' : absoluteTime.format(date);
+  }
+
+  function optionalPositive(raw) {
+    if (raw === '' || raw == null) return null;
+    const value = Number(raw);
+    return Number.isInteger(value) && value > 0 ? value : NaN;
+  }
+
+  function buildPayload() {
+    if (!selectedItem) {
+      return { error: 'Choose a film, episode, season, or series first.' };
+    }
+
+    const payload = {
+      jellyfinItemId: selectedItem.id,
+      allowDownload
+    };
+
+    if (expiryChoice === 'never') {
+      payload.neverExpires = true;
+    } else if (expiryChoice === 'custom') {
+      const days = Number(customDays);
+      if (!Number.isFinite(days) || days <= 0) {
+        return { error: 'Enter how many days the link should last.' };
+      }
+      payload.expiresInMinutes = Math.round(days * 1440);
+    } else {
+      payload.expiresInMinutes = Number(expiryChoice);
+    }
+
+    const plays = optionalPositive(maxPlays);
+    if (Number.isNaN(plays)) return { error: 'Play limit must be a whole number of 1 or more.' };
+    if (plays != null) payload.maxTotalPlays = plays;
+
+    const concurrent = optionalPositive(maxConcurrent);
+    if (Number.isNaN(concurrent)) {
+      return { error: 'Watching at once must be a whole number of 1 or more.' };
+    }
+    if (concurrent != null) payload.maxConcurrentViewers = concurrent;
+
+    if (maxHeight) payload.maxVideoHeight = Number(maxHeight);
+    if (maxBitrate) payload.maxVideoBitrate = Number(maxBitrate);
+    if (password !== '') payload.password = password;
+
+    return { payload };
+  }
+
+  async function submit() {
+    formError = '';
+    const built = buildPayload();
+    if (built.error) {
+      formError = built.error;
+      return;
+    }
+
+    submitting = true;
+    try {
+      const response = await fetch('/api/admin/shares', {
+        method: 'POST',
+        headers: {
+          'X-Backend-Key': apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(built.payload)
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || 'Could not create the link.');
+      }
+      created = data;
+      dispatch('created');
+    } catch (e) {
+      formError = e.message || 'Could not create the link.';
+    } finally {
+      submitting = false;
+    }
+  }
+
+  async function copyCreated() {
+    const ok = await copyText(created.publicUrl);
+    if (!ok) return;
+    copied = true;
+    clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => (copied = false), 1600);
+  }
+
+  function createAnother() {
+    created = null;
+    copied = false;
+    selectedItem = null;
+    searchQuery = '';
+    results = [];
+    searchError = '';
+    expiryChoice = '43200';
+    customDays = '30';
+    maxPlays = '';
+    maxConcurrent = '';
+    maxHeight = '';
+    maxBitrate = '';
+    password = '';
+    allowDownload = true;
+    formError = '';
+    runSearch('');
+  }
 </script>
 
 <main class="create">
@@ -11,10 +256,184 @@
     who has no Jellyfin account.
   </p>
 
-  <div class="state">
-    <p class="state__head">Share creation lands in the next step.</p>
-    <p>The library picker and link terms are being built here.</p>
-  </div>
+  {#if created}
+    <section class="success" aria-live="polite">
+      <p class="success__head">Link created.</p>
+      <p class="success__note">Anyone with this address can open the share page.</p>
+
+      <div class="success__url">
+        <code>{created.publicUrl}</code>
+        <button class="btn-ghost" type="button" on:click={copyCreated}>
+          {copied ? 'Copied' : 'Copy link'}
+        </button>
+      </div>
+
+      <p class="success__meta">
+        {#if created.expiresAt}Expires {formatDate(created.expiresAt)}{:else}Never expires{/if}
+        {#if created.maxTotalPlays}· {created.maxTotalPlays} {created.maxTotalPlays === 1 ? 'play' : 'plays'}{/if}
+        {#if created.maxConcurrentViewers}· {created.maxConcurrentViewers} watching at once{/if}
+      </p>
+
+      <div class="success__actions">
+        <button class="btn-primary" type="button" on:click={createAnother}>Create another</button>
+        <button class="btn-ghost" type="button" on:click={() => dispatch('viewShares')}>View in Shares</button>
+      </div>
+    </section>
+  {:else}
+    <form class="form" on:submit|preventDefault={submit}>
+      <section class="section">
+        <h2 class="section__head">Item</h2>
+
+        {#if selectedItem}
+          <div class="chosen">
+            <span class="chosen__poster">
+              <PosterThumb {apiKey} itemId={selectedItem.id} alt="" maxWidth={300} />
+            </span>
+            <div class="chosen__body">
+              <p class="chosen__title">{selectedItem.name}</p>
+              <p class="chosen__meta">
+                {itemContext(selectedItem)}
+                {#if selectedItem.runtimeSeconds}· {formatRuntime(selectedItem.runtimeSeconds)}{/if}
+              </p>
+              <button class="btn-ghost" type="button" on:click={changeItem}>Change item</button>
+            </div>
+          </div>
+        {:else}
+          <label class="search">
+            <span class="label">Search the Jellyfin library</span>
+            <input
+              class="input"
+              type="search"
+              bind:value={searchQuery}
+              on:input={onSearchInput}
+              placeholder="Film, series, season, or episode"
+              autocomplete="off"
+            />
+          </label>
+
+          <div class="results" aria-live="polite">
+            {#if searching}
+              <div class="pick-state">
+                <span class="meter" aria-hidden="true"></span>
+                <p>Searching</p>
+              </div>
+            {:else if searchError}
+              <div class="pick-state pick-state--error">
+                <p>{searchError}</p>
+                <button class="btn-ghost" type="button" on:click={() => runSearch(searchQuery)}>Try again</button>
+              </div>
+            {:else if results.length === 0}
+              <p class="pick-state">
+                No matches{#if searchQuery.trim()} for “{searchQuery.trim()}”{/if}.
+              </p>
+            {:else}
+              <ul class="pick">
+                {#each results as item (item.id)}
+                  <li>
+                    <button class="pick__row" type="button" on:click={() => choose(item)}>
+                      <span class="pick__poster">
+                        <PosterThumb {apiKey} itemId={item.id} alt="" maxWidth={160} />
+                      </span>
+                      <span class="pick__text">
+                        <span class="pick__title">{item.name}</span>
+                        <span class="pick__sub">{itemContext(item)}</span>
+                      </span>
+                    </button>
+                  </li>
+                {/each}
+              </ul>
+            {/if}
+          </div>
+        {/if}
+      </section>
+
+      <section class="section">
+        <h2 class="section__head">Link terms</h2>
+
+        <div class="field">
+          <span class="label">Expires</span>
+          <div class="chips">
+            {#each EXPIRY as option (option.value)}
+              <button
+                class="chip"
+                class:chip--active={expiryChoice === option.value}
+                type="button"
+                aria-pressed={expiryChoice === option.value}
+                on:click={() => (expiryChoice = option.value)}
+              >{option.label}</button>
+            {/each}
+          </div>
+        </div>
+
+        {#if expiryChoice === 'custom'}
+          <label class="field field--narrow">
+            <span class="label">Days from now</span>
+            <input class="input" type="number" min="1" step="1" bind:value={customDays} />
+          </label>
+        {/if}
+
+        <div class="pair">
+          <label class="field">
+            <span class="label">Play limit <span class="hint">optional</span></span>
+            <input class="input" type="number" min="1" step="1" bind:value={maxPlays} placeholder="Unlimited" />
+          </label>
+          <label class="field">
+            <span class="label">Watching at once <span class="hint">optional</span></span>
+            <input class="input" type="number" min="1" step="1" bind:value={maxConcurrent} placeholder="Unlimited" />
+          </label>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2 class="section__head">Playback</h2>
+        <div class="pair">
+          <label class="field">
+            <span class="label">Maximum picture</span>
+            <select class="input" bind:value={maxHeight}>
+              {#each HEIGHTS as option (option.value)}
+                <option value={option.value}>{option.label}</option>
+              {/each}
+            </select>
+          </label>
+          <label class="field">
+            <span class="label">Maximum bitrate</span>
+            <select class="input" bind:value={maxBitrate}>
+              {#each BITRATES as option (option.value)}
+                <option value={option.value}>{option.label}</option>
+              {/each}
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2 class="section__head">Access</h2>
+
+        <label class="field field--narrow">
+          <span class="label">Password <span class="hint">optional</span></span>
+          <input class="input" type="password" bind:value={password} autocomplete="new-password" />
+        </label>
+
+        <label class="check">
+          <input type="checkbox" bind:checked={allowDownload} />
+          <span>Allow downloads</span>
+        </label>
+      </section>
+
+      {#if formError}
+        <p class="banner" role="alert">{formError}</p>
+      {/if}
+
+      <div class="submit">
+        <button class="btn-primary" type="submit" disabled={submitting}>
+          {submitting ? 'Creating' : 'Create link'}
+        </button>
+        {#if !selectedItem}
+          <p class="submit__hint">Choose an item first.</p>
+        {/if}
+      </div>
+    </form>
+  {/if}
 </main>
 
 <style>
@@ -30,13 +449,305 @@
     margin-bottom: var(--space-2xl);
   }
 
-  .state {
+  .form {
     display: grid;
+    gap: var(--space-2xl);
+    max-width: 46rem;
+  }
+
+  .section {
+    display: grid;
+    gap: var(--space-md);
+    padding-top: var(--space-lg);
+    border-top: var(--rule-hair) solid var(--color-rule-2);
+  }
+
+  .section__head {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-neutral);
+  }
+
+  .label {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--color-ink-2);
+  }
+
+  .hint { font-weight: 400; color: var(--color-neutral); }
+
+  .field { display: grid; gap: var(--space-2xs); }
+
+  .field--narrow { max-width: 18rem; }
+
+  .pair {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: var(--space-md);
+  }
+
+  .input {
+    width: 100%;
+    min-height: var(--control-h);
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--color-paper-2);
+    color: var(--color-ink);
+    font-family: var(--font-outlier);
+    border: var(--rule-hair) solid var(--color-rule);
+    border-radius: var(--radius-input);
+    outline: 2px solid transparent;
+    outline-offset: 1px;
+    transition: background-color var(--dur-micro) var(--ease-out),
+                border-color var(--dur-micro) var(--ease-out);
+  }
+
+  .input::placeholder { color: var(--color-neutral); }
+
+  @media (hover: hover) {
+    .input:hover { background: var(--color-paper-3); }
+  }
+
+  .input:focus-visible {
+    outline-color: var(--color-focus);
+    border-color: var(--color-ink-2);
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+
+  .chip {
+    min-height: 2.1rem;
+    padding-inline: var(--space-md);
+    background: none;
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    white-space: nowrap;
+    border: var(--rule-hair) solid var(--color-rule);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: background-color var(--dur-micro) var(--ease-out),
+                color var(--dur-micro) var(--ease-out);
+  }
+
+  .chip--active {
+    background: var(--color-paper-2);
+    color: var(--color-ink);
+    border-color: var(--color-ink-2);
+  }
+
+  @media (hover: hover) {
+    .chip:hover:not(.chip--active) { background: var(--color-paper-2); color: var(--color-ink); }
+  }
+
+  .chip:active { transform: translateY(1px); }
+
+  .search { display: grid; gap: var(--space-2xs); }
+
+  .results { max-width: 46rem; }
+
+  .pick { list-style: none; margin: 0; padding: 0; max-height: 24rem; overflow-y: auto; }
+
+  .pick__row {
+    display: flex;
+    align-items: center;
     gap: var(--space-sm);
-    justify-items: start;
-    padding-block: var(--space-2xl);
+    width: 100%;
+    padding: var(--space-xs);
+    background: none;
+    color: var(--color-ink);
+    text-align: start;
+    border: none;
+    border-bottom: var(--rule-hair) solid var(--color-rule-2);
+    cursor: pointer;
+    transition: background-color var(--dur-micro) var(--ease-out);
+  }
+
+  @media (hover: hover) {
+    .pick__row:hover { background: var(--color-paper-2); }
+  }
+
+  .pick__poster {
+    flex: none;
+    display: block;
+    width: 2.6rem;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border-radius: calc(var(--radius-input) / 1.5);
+  }
+
+  .pick__text { display: grid; gap: var(--space-3xs); min-width: 0; }
+
+  .pick__title { font-weight: 600; overflow-wrap: anywhere; }
+
+  .pick__sub {
+    font-family: var(--font-outlier);
+    font-size: var(--text-sm);
     color: var(--color-muted);
   }
 
-  .state__head { font-size: var(--text-md); color: var(--color-ink); }
+  .pick-state {
+    display: grid;
+    gap: var(--space-sm);
+    justify-items: start;
+    padding-block: var(--space-xl);
+    color: var(--color-muted);
+  }
+
+  .pick-state--error { color: var(--color-danger); }
+
+  .meter {
+    width: 7.5rem;
+    height: 2px;
+    background: var(--color-rule);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .meter::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 40%;
+    background: var(--color-accent);
+    animation: sweep 1.1s var(--ease-in-out) infinite;
+  }
+
+  @keyframes sweep {
+    0%   { transform: translateX(-110%); }
+    100% { transform: translateX(260%); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .meter::after { width: 100%; }
+  }
+
+  .chosen {
+    display: flex;
+    gap: var(--space-md);
+    align-items: flex-start;
+    padding: var(--space-md);
+    background: var(--color-paper-2);
+    border: var(--rule-hair) solid var(--color-rule);
+    border-radius: var(--radius-card);
+  }
+
+  .chosen__poster {
+    flex: none;
+    display: block;
+    width: 5rem;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border-radius: var(--radius-input);
+  }
+
+  .chosen__body { display: grid; gap: var(--space-xs); justify-items: start; min-width: 0; }
+
+  .chosen__title { font-weight: 600; font-size: var(--text-md); overflow-wrap: anywhere; }
+
+  .chosen__meta {
+    font-family: var(--font-outlier);
+    font-size: var(--text-sm);
+    color: var(--color-muted);
+  }
+
+  .check {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-sm);
+    color: var(--color-ink-2);
+    cursor: pointer;
+  }
+
+  .check input { width: 1rem; height: 1rem; accent-color: var(--color-accent); }
+
+  .banner {
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-paper-2);
+    border-radius: var(--radius-card);
+    color: var(--color-danger);
+    font-size: var(--text-sm);
+  }
+
+  .submit { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-md); }
+
+  .submit__hint { font-size: var(--text-sm); color: var(--color-muted); }
+
+  .btn-primary, .btn-ghost {
+    min-height: var(--control-h);
+    padding-inline: var(--space-lg);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    white-space: nowrap;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: background-color var(--dur-micro) var(--ease-out),
+                color var(--dur-micro) var(--ease-out),
+                transform var(--dur-micro) var(--ease-out);
+  }
+
+  .btn-primary {
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+    border: none;
+  }
+
+  @media (hover: hover) {
+    .btn-primary:hover:not(:disabled) { transform: translateY(-1px); }
+    .btn-ghost:hover { background: var(--color-paper-2); color: var(--color-ink); }
+  }
+
+  .btn-primary:active:not(:disabled) { transform: translateY(1px); }
+
+  .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .btn-ghost {
+    background: none;
+    color: var(--color-muted);
+    border: var(--rule-hair) solid var(--color-rule);
+  }
+
+  .success {
+    display: grid;
+    gap: var(--space-md);
+    max-width: 46rem;
+    padding: var(--space-lg);
+    background: var(--color-paper-2);
+    border: var(--rule-hair) solid var(--color-rule);
+    border-radius: var(--radius-card);
+  }
+
+  .success__head { font-size: var(--text-lg); font-weight: 600; }
+
+  .success__note { color: var(--color-muted); font-size: var(--text-sm); }
+
+  .success__url {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs);
+    background: var(--color-paper-3);
+    border-radius: var(--radius-input);
+  }
+
+  .success__url code {
+    flex: 1;
+    min-width: 0;
+    padding-inline: var(--space-xs);
+    font-family: var(--font-outlier);
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
+  }
+
+  .success__meta {
+    font-family: var(--font-outlier);
+    font-size: var(--text-sm);
+    color: var(--color-muted);
+  }
+
+  .success__actions { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
 </style>

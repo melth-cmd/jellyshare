@@ -1,6 +1,7 @@
 <script>
   import BrandMark from './BrandMark.svelte';
   import CreatePanel from './CreatePanel.svelte';
+  import { copyText } from '../clipboard.js';
   import { onMount, tick, createEventDispatcher } from 'svelte';
 
   export let apiKey;
@@ -53,6 +54,12 @@
   function refreshCurrent() {
     if (activeTab === 'shares') loadShares();
     else createPanel?.reload();
+  }
+
+  // A new link may land in any filter; reload the index in the background so
+  // the Shares tab and the counts are current when the admin switches over.
+  function onShareCreated() {
+    loadShares();
   }
 
   // The next page continues below the last link held, not at a row number, so
@@ -251,9 +258,9 @@
     return `${Math.floor(diff / (1000 * 60))} min`;
   }
 
-  function copyLink(share) {
+  async function copyLink(share) {
     const url = `${window.location.origin}/s/${share.publicToken}`;
-    navigator.clipboard.writeText(url);
+    if (!(await copyText(url))) return;
     clearTimeout(copyTimer);
     copiedId = share.id;
     copyTimer = setTimeout(() => (copiedId = null), 1600);
@@ -284,7 +291,7 @@
       on:click={() => setTab('shares')}
     >Shares</button>
   </div>
-  <button class="pill__icon" on:click={refreshCurrent} disabled={loading || activeTab === 'create'} aria-label="Reload">
+  <button class="pill__icon" on:click={refreshCurrent} disabled={loading} aria-label="Reload">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
       <path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 01-9 9 9.75 9.75 0 01-6.74-2.74L3 16M3 21v-5h5"/>
     </svg>
@@ -414,7 +421,12 @@
   </main>
   {:else}
     <div id="panel-create" role="tabpanel" aria-labelledby="tab-create">
-      <CreatePanel {apiKey} bind:this={createPanel} />
+      <CreatePanel
+        {apiKey}
+        bind:this={createPanel}
+        on:created={onShareCreated}
+        on:viewShares={() => setTab('shares')}
+      />
     </div>
   {/if}
 
