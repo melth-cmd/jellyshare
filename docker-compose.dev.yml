@@ -14,8 +14,10 @@ services:
       - go-build-cache:/root/.cache/go-build
       - node-modules:/workspace/web/node_modules
     ports:
-      - "8098:8097"   # Backend on the host; production keeps 8097
-      - "5173:5173"   # Vite dev server
+      # Bound to the LAN address so another machine can reach the dev UI.
+      # Production keeps 8097; the dev stack uses 8098.
+      - "${DEV_HOST_IP:-localhost}:8098:8097"
+      - "${DEV_HOST_IP:-localhost}:5173:5173"
     environment:
       - JFSHARE_PORT=8097
       - JFSHARE_DB_DSN=postgres://jfshare:jfshare@postgres:5432/jfshare?sslmode=disable
