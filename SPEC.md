@@ -15,6 +15,16 @@ flow.
 - Changing the public viewer experience.
 - Multi-tenant administration; one admin key is enough.
 
+## Decisions
+
+- Admin page has two tabs: **Create** and **Shares**.
+- The Shares tab filters with a segmented control: **Active / Inactive / All**,
+  defaulting to Active.
+- New shares are owned by the first Jellyfin user the backend resolves at
+  startup. No user picker.
+- The create form exposes the same terms the API accepts: expiry, never expires,
+  play limit, concurrent viewers, quality cap, password, downloads.
+
 ## Current state
 
 - The backend already has `POST /api/admin/shares` (`internal/handlers/admin.go`)
@@ -25,12 +35,14 @@ flow.
 ## User flow
 
 1. Admin opens `/admin`, already authenticated with the backend key.
-2. Admin opens a "New share" panel or dialog.
-3. Admin searches or browses the Jellyfin library and picks a film, episode,
-   season, or series.
+2. The top bar shows the wordmark, Create and Shares tabs, refresh, and sign out.
+3. On **Create**, the admin searches the Jellyfin library and picks a film,
+   episode, season, or series.
 4. Admin sets the link terms: expiry, play limit, concurrent viewers, quality
    cap, password, and whether downloads are allowed.
-5. Admin creates the share and gets the public URL, with a copy button.
+5. Admin creates the share and gets the public URL with a copy button.
+6. On **Shares**, the admin sees the new link and can filter Active, Inactive, or
+   All.
 
 ## Requirements
 
@@ -38,8 +50,8 @@ flow.
 
 - Search Jellyfin by title; show poster, title, type, and year.
 - Support movies, episodes, seasons, and series.
-- The selected item supplies `jellyfinItemId`; the owning user supplies
-  `jellyfinUserId`.
+- The selected item supplies `jellyfinItemId`; the backend fills the owning
+  Jellyfin user automatically.
 - The backend needs read access to the Jellyfin library from the admin API.
 
 ### Form fields
@@ -54,21 +66,25 @@ Match `models.CreateShareRequest`:
 - `password` (optional)
 - `allowDownload` (default on)
 
+### Shares tab
+
+- Segmented filter: Active / Inactive / All, default Active.
+- Inactive means revoked, expired, or play limit spent.
+- Counts reflect the selected filter.
+- Revoke and detail views work in every filter.
+
 ### After creation
 
 - Show the public link and copy it.
-- The new share appears in the existing list without a full page reload.
+- The new share appears in the Shares tab without a full page reload.
 
 ### Validation and errors
 
-- Required: item and user.
+- Required: an item.
 - Show server errors inline; do not lose the form state.
 - Never log the admin key or the share password.
 
 ## Open questions
 
-- Where does the admin pick the Jellyfin user? Fixed to a configured default, or
-  a user selector?
-- Should the item search be server-side (new `/api/admin/library` endpoint) or
-  reuse an existing Jellyfin search through the admin API?
 - Any personal defaults worth prefilling (expiry, play limit, downloads)?
+- Should the quality cap offer bitrate presets or only heights?

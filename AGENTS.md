@@ -26,10 +26,13 @@ go test ./...
 # Frontend (Svelte 4 + Vite)
 cd web && npm install && npm run build
 
-# Dev stack (Docker)
-make dev-up          # backend :8097, frontend :5173
+# Dev stack (Docker, hot reload)
+make dev-up          # backend :8098, frontend :5173
 make dev-logs
 make dev-down
+
+# Refresh dev database from production
+make dev-db-sync
 
 # Local demo with a throwaway Jellyfin
 make demo-up
@@ -71,6 +74,7 @@ changes run the frontend build. Mention in your summary which checks you ran.
   destructive way, or altering public share behavior.
 - Never commit `.env` or real credentials. `.env` is gitignored on purpose.
 - Do not weaken authentication, rate limiting, or the share token checks.
-- Update `progress.md` after finishing a meaningful chunk of work, and keep
-  `spec.md` in sync when requirements change.
+- Update `PROGRESS.md` after finishing a meaningful chunk of work, and keep
+  `SPEC.md` in sync when requirements change. Follow the step order in
+  `PROGRESS.md` unless the user asks to jump ahead.
 - Commit with clear messages and push to `origin main`. Do not force-push.
