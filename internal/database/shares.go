@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -73,38 +74,64 @@ func (db *DB) GetSharesByUser(ctx context.Context, jellyfinUserID string) ([]mod
 	return shares, nil
 }
 
+// activeShareSQL is the one definition of a link that still works: not
+// revoked, not past its expiry, and not out of plays.
+const activeShareSQL = `revoked_at IS NULL
+	AND (expires_at IS NULL OR expires_at > NOW())
+	AND (max_total_plays IS NULL OR total_plays < max_total_plays)`
+
+func statusFilterSQL(status string) string {
+	switch status {
+	case "active":
+		return activeShareSQL
+	case "inactive":
+		return "NOT (" + activeShareSQL + ")"
+	default:
+		return ""
+	}
+}
+
 // GetSharesPage returns up to limit links, newest first, starting below the
 // cursor - or from the top when there is none. id breaks ties between links
-// created in the same instant, so no link falls between two pages.
-func (db *DB) GetSharesPage(ctx context.Context, limit int, after *models.PageCursor) ([]models.Share, error) {
+// created in the same instant, so no link falls between two pages. status is
+// active, inactive, or anything else for every link.
+func (db *DB) GetSharesPage(ctx context.Context, limit int, after *models.PageCursor, status string) ([]models.Share, error) {
 	var shares []models.Share
-	var err error
-	if after == nil {
-		query := `SELECT * FROM shares ORDER BY created_at DESC, id DESC LIMIT $1`
-		err = db.SelectContext(ctx, &shares, query, limit)
-	} else {
-		query := `SELECT * FROM shares WHERE (created_at, id) < ($2, $3)
-			ORDER BY created_at DESC, id DESC LIMIT $1`
-		err = db.SelectContext(ctx, &shares, query, limit, after.CreatedAt, after.ID)
+	where := []string{}
+	args := []interface{}{}
+
+	if filter := statusFilterSQL(status); filter != "" {
+		where = append(where, filter)
 	}
-	if err != nil {
+	if after != nil {
+		where = append(where, fmt.Sprintf("(created_at, id) < ($%d, $%d)", len(args)+1, len(args)+2))
+		args = append(args, after.CreatedAt, after.ID)
+	}
+
+	query := "SELECT * FROM shares"
+	if len(where) > 0 {
+		query += " WHERE " + strings.Join(where, " AND ")
+	}
+	query += fmt.Sprintf(" ORDER BY created_at DESC, id DESC LIMIT $%d", len(args)+1)
+	args = append(args, limit)
+
+	if err := db.SelectContext(ctx, &shares, query, args...); err != nil {
 		return nil, fmt.Errorf("failed to get shares: %w", err)
 	}
 	return shares, nil
 }
 
-// CountShares counts every link, and those that can still be watched - not
-// revoked, not past their expiry. The index shows both however many rows it
-// has loaded so far.
-func (db *DB) CountShares(ctx context.Context) (total, live int, err error) {
+// CountShares counts every link and those that can still be watched. The index
+// shows the counts however many rows it has loaded so far.
+func (db *DB) CountShares(ctx context.Context) (total, active int, err error) {
 	query := `
 		SELECT COUNT(*),
-		       COUNT(*) FILTER (WHERE revoked_at IS NULL AND (expires_at IS NULL OR expires_at > NOW()))
+		       COUNT(*) FILTER (WHERE ` + activeShareSQL + `)
 		FROM shares`
-	if err := db.QueryRowContext(ctx, query).Scan(&total, &live); err != nil {
+	if err := db.QueryRowContext(ctx, query).Scan(&total, &active); err != nil {
 		return 0, 0, fmt.Errorf("failed to count shares: %w", err)
 	}
-	return total, live, nil
+	return total, active, nil
 }
 
 func (db *DB) RevokeShare(ctx context.Context, id uuid.UUID) error {
@@ -227,7 +254,7 @@ func (db *DB) UpdateLastActivity(ctx context.Context, shareID uuid.UUID) error {
 
 func (db *DB) GetActiveSharesCount(ctx context.Context) (int, error) {
 	var count int
-	query := `SELECT COUNT(*) FROM shares WHERE revoked_at IS NULL AND (expires_at IS NULL OR expires_at > NOW())`
+	query := `SELECT COUNT(*) FROM shares WHERE ` + activeShareSQL
 	err := db.GetContext(ctx, &count, query)
 	return count, err
 }

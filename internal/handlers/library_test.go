@@ -17,3 +17,18 @@ func TestParseSearchLimit(t *testing.T) {
 		}
 	}
 }
+
+func TestNormalizeShareStatus(t *testing.T) {
+	for raw, want := range map[string]string{
+		"":         "all",
+		"all":      "all",
+		"active":   "active",
+		"inactive": "inactive",
+		"ACTIVE":   "all",
+		"nonsense": "all",
+	} {
+		if got := normalizeShareStatus(raw); got != want {
+			t.Errorf("normalizeShareStatus(%q) = %q, want %q", raw, got, want)
+		}
+	}
+}

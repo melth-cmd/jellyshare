@@ -72,6 +72,16 @@ Match `models.CreateShareRequest`:
 - Inactive means revoked, expired, or play limit spent.
 - Counts reflect the selected filter.
 - Revoke and detail views work in every filter.
+- Rows can be selected with checkboxes; shift-click selects a range.
+- Bulk actions: revoke, extend expiry / add plays, and delete. Delete is only
+  allowed for inactive links.
+- Individual links can be edited from the detail sheet.
+
+### Retention
+
+- Links are deleted once they have been expired or revoked for longer than
+  `JFSHARE_SHARE_RETENTION_DAYS` (default 365).
+- Live links and links that never expire are never deleted.
 
 ### After creation
 

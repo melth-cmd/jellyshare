@@ -51,18 +51,18 @@ type Share struct {
 	TotalPlays               int            `db:"total_plays" json:"totalPlays"`
 	CurrentConcurrentViewers int            `db:"current_concurrent_viewers" json:"currentConcurrentViewers"`
 	// ExpiresAt is NULL for a share that never expires.
-	ExpiresAt                NullTime       `db:"expires_at" json:"expiresAt"`
-	PasswordHash             sql.NullString `db:"password_hash" json:"-"`
-	CreatedAt                time.Time      `db:"created_at" json:"createdAt"`
+	ExpiresAt    NullTime       `db:"expires_at" json:"expiresAt"`
+	PasswordHash sql.NullString `db:"password_hash" json:"-"`
+	CreatedAt    time.Time      `db:"created_at" json:"createdAt"`
 	// MaxVideoHeight / MaxVideoBitrate cap the quality of this share. NULL means the
 	// source decides, which is the default.
-	MaxVideoHeight           sql.NullInt64  `db:"max_video_height" json:"maxVideoHeight,omitempty"`
-	MaxVideoBitrate          sql.NullInt64  `db:"max_video_bitrate" json:"maxVideoBitrate,omitempty"`
+	MaxVideoHeight  sql.NullInt64 `db:"max_video_height" json:"maxVideoHeight,omitempty"`
+	MaxVideoBitrate sql.NullInt64 `db:"max_video_bitrate" json:"maxVideoBitrate,omitempty"`
 	// AllowDownload is the sharer's choice for this link; the server-wide setting
 	// can still switch downloads off for every link.
-	AllowDownload            bool           `db:"allow_download" json:"allowDownload"`
-	RevokedAt                sql.NullTime   `db:"revoked_at" json:"revokedAt,omitempty"`
-	LastActivityAt           sql.NullTime   `db:"last_activity_at" json:"lastActivityAt,omitempty"`
+	AllowDownload  bool         `db:"allow_download" json:"allowDownload"`
+	RevokedAt      sql.NullTime `db:"revoked_at" json:"revokedAt,omitempty"`
+	LastActivityAt sql.NullTime `db:"last_activity_at" json:"lastActivityAt,omitempty"`
 }
 
 func (s *Share) IsExpired() bool {
@@ -89,12 +89,12 @@ func (s *Share) IsRevoked() bool {
 // ShareGone is what a link that no longer opens says about itself: why, since
 // when, and which link it was, so the viewer can tell whoever shared it.
 type ShareGone struct {
-	Error   string    `json:"error"`
-	Reason  string    `json:"reason"` // "revoked" or "expired"
-	Title   string    `json:"title"`
+	Error  string `json:"error"`
+	Reason string `json:"reason"` // "revoked" or "expired"
+	Title  string `json:"title"`
 	// SeriesName is set by the handler for a season link, as on SharePublicInfo.
 	SeriesName string    `json:"seriesName,omitempty"`
-	EndedAt time.Time `json:"endedAt"`
+	EndedAt    time.Time `json:"endedAt"`
 }
 
 // Gone returns why the share no longer opens, or nil while it still does. A
@@ -112,6 +112,12 @@ func (s *Share) Gone() *ShareGone {
 
 func (s *Share) IsValid() bool {
 	return !s.IsExpired() && !s.IsRevoked()
+}
+
+// IsActive is the index's definition of a link that still works: valid and
+// with plays left.
+func (s *Share) IsActive() bool {
+	return s.IsValid() && !s.PlayLimitReached()
 }
 
 func (s *Share) RequiresPassword() bool {
@@ -154,30 +160,30 @@ func (s *Share) CanContinuePlay() bool {
 }
 
 type CreateShareRequest struct {
-	JellyfinItemID       string  `json:"jellyfinItemId"`
-	JellyfinUserID       string  `json:"jellyfinUserId"`
-	MaxTotalPlays        *int    `json:"maxTotalPlays,omitempty"`
-	MaxConcurrentViewers *int    `json:"maxConcurrentViewers,omitempty"`
-	ExpiresInMinutes     int     `json:"expiresInMinutes"`
+	JellyfinItemID       string `json:"jellyfinItemId"`
+	JellyfinUserID       string `json:"jellyfinUserId"`
+	MaxTotalPlays        *int   `json:"maxTotalPlays,omitempty"`
+	MaxConcurrentViewers *int   `json:"maxConcurrentViewers,omitempty"`
+	ExpiresInMinutes     int    `json:"expiresInMinutes"`
 	// NeverExpires overrides ExpiresInMinutes and stores a NULL expiry.
-	NeverExpires         bool    `json:"neverExpires,omitempty"`
+	NeverExpires bool `json:"neverExpires,omitempty"`
 	// MaxVideoHeight caps the picture (720 for 720p and so on); MaxVideoBitrate caps
 	// the transcode target. Both only ever lower what the source would give.
-	MaxVideoHeight       *int    `json:"maxVideoHeight,omitempty"`
-	MaxVideoBitrate      *int    `json:"maxVideoBitrate,omitempty"`
-	Password             *string `json:"password,omitempty"`
+	MaxVideoHeight  *int    `json:"maxVideoHeight,omitempty"`
+	MaxVideoBitrate *int    `json:"maxVideoBitrate,omitempty"`
+	Password        *string `json:"password,omitempty"`
 	// AllowDownload is a pointer so an older client that does not send it gets
 	// the default - downloads on - rather than false.
-	AllowDownload        *bool   `json:"allowDownload,omitempty"`
+	AllowDownload *bool `json:"allowDownload,omitempty"`
 }
 
 type CreateShareResponse struct {
-	ShareID              uuid.UUID `json:"shareId"`
-	PublicURL            string    `json:"publicUrl"`
-	Token                string    `json:"token"`
+	ShareID              uuid.UUID  `json:"shareId"`
+	PublicURL            string     `json:"publicUrl"`
+	Token                string     `json:"token"`
 	ExpiresAt            *time.Time `json:"expiresAt"`
-	MaxTotalPlays        *int      `json:"maxTotalPlays,omitempty"`
-	MaxConcurrentViewers *int      `json:"maxConcurrentViewers,omitempty"`
+	MaxTotalPlays        *int       `json:"maxTotalPlays,omitempty"`
+	MaxConcurrentViewers *int       `json:"maxConcurrentViewers,omitempty"`
 }
 
 type AudioTrack struct {
@@ -198,32 +204,32 @@ type SubtitleTrack struct {
 	IsForced     bool   `json:"isForced"`
 	// IsText marks a subtitle that can be delivered as a WebVTT sidecar. Image
 	// subtitles must be burned in, which forces a video transcode.
-	IsText       bool   `json:"isText"`
+	IsText bool `json:"isText"`
 }
 
 type SharePublicInfo struct {
-	Title                    string    `json:"title"`
+	Title string `json:"title"`
 	// SeriesName names the show a season share belongs to. Jellyfin titles a
 	// season "Season 1"; on its own that does not say which show.
-	SeriesName               string    `json:"seriesName,omitempty"`
-	Overview                 string    `json:"overview,omitempty"`
-	Tagline                  string    `json:"tagline,omitempty"`
-	RuntimeSeconds           int64     `json:"runtimeSeconds,omitempty"`
-	PosterURL                string    `json:"posterUrl,omitempty"`
-	BackdropURL              string    `json:"backdropUrl,omitempty"`
-	LogoURL                  string    `json:"logoUrl,omitempty"`
-	ItemType                 string    `json:"itemType"`
-	ExpiresAt                *time.Time `json:"expiresAt"`
-	RequiresPassword         bool      `json:"requiresPassword"`
+	SeriesName       string     `json:"seriesName,omitempty"`
+	Overview         string     `json:"overview,omitempty"`
+	Tagline          string     `json:"tagline,omitempty"`
+	RuntimeSeconds   int64      `json:"runtimeSeconds,omitempty"`
+	PosterURL        string     `json:"posterUrl,omitempty"`
+	BackdropURL      string     `json:"backdropUrl,omitempty"`
+	LogoURL          string     `json:"logoUrl,omitempty"`
+	ItemType         string     `json:"itemType"`
+	ExpiresAt        *time.Time `json:"expiresAt"`
+	RequiresPassword bool       `json:"requiresPassword"`
 	// Locked is true while the password has not been entered in this browser.
 	// The response then carries only the title, artwork and terms.
-	Locked                   bool      `json:"locked"`
-	MaxTotalPlays            *int64    `json:"maxTotalPlays,omitempty"`
-	TotalPlays               int       `json:"totalPlays"`
-	MaxConcurrentViewers     *int64    `json:"maxConcurrentViewers,omitempty"`
-	CurrentConcurrentViewers int       `json:"currentConcurrentViewers"`
+	Locked                   bool   `json:"locked"`
+	MaxTotalPlays            *int64 `json:"maxTotalPlays,omitempty"`
+	TotalPlays               int    `json:"totalPlays"`
+	MaxConcurrentViewers     *int64 `json:"maxConcurrentViewers,omitempty"`
+	CurrentConcurrentViewers int    `json:"currentConcurrentViewers"`
 	// AllowDownload tells the page whether to offer downloads at all.
-	AllowDownload            bool      `json:"allowDownload"`
+	AllowDownload bool `json:"allowDownload"`
 
 	// Extended metadata (fetched live from Jellyfin)
 	Year            int               `json:"year,omitempty"`
@@ -237,9 +243,9 @@ type SharePublicInfo struct {
 	VideoQuality    *VideoQualityInfo `json:"videoQuality,omitempty"`
 	// DownloadBytes is the size of the file a download hands over, so a viewer
 	// on mobile data knows what a tap on Download costs.
-	DownloadBytes   int64             `json:"downloadBytes,omitempty"`
-	AudioTracks     []AudioTrack      `json:"audioTracks,omitempty"`
-	SubtitleTracks  []SubtitleTrack   `json:"subtitleTracks,omitempty"`
+	DownloadBytes  int64           `json:"downloadBytes,omitempty"`
+	AudioTracks    []AudioTrack    `json:"audioTracks,omitempty"`
+	SubtitleTracks []SubtitleTrack `json:"subtitleTracks,omitempty"`
 }
 
 // WithholdDetails strips what a password link should not say before its
@@ -360,7 +366,7 @@ type ShareListItem struct {
 	CurrentConcurrentViewers int        `db:"current_concurrent_viewers" json:"currentConcurrentViewers"`
 	MaxTotalPlays            *int64     `db:"max_total_plays" json:"maxTotalPlays,omitempty"`
 	MaxConcurrentViewers     *int64     `db:"max_concurrent_viewers" json:"maxConcurrentViewers,omitempty"`
-	ExpiresAt                *time.Time  `db:"expires_at" json:"expiresAt"`
+	ExpiresAt                *time.Time `db:"expires_at" json:"expiresAt"`
 	CreatedAt                time.Time  `db:"created_at" json:"createdAt"`
 	RevokedAt                *time.Time `db:"revoked_at" json:"revokedAt,omitempty"`
 	MaxVideoHeight           *int64     `json:"maxVideoHeight,omitempty"`
@@ -372,9 +378,9 @@ type ShareListItem struct {
 }
 
 type UpdateShareRequest struct {
-	MaxTotalPlays        *int   `json:"maxTotalPlays,omitempty"`
-	MaxConcurrentViewers *int   `json:"maxConcurrentViewers,omitempty"`
-	ExtendMinutes        *int   `json:"extendMinutes,omitempty"`
+	MaxTotalPlays        *int    `json:"maxTotalPlays,omitempty"`
+	MaxConcurrentViewers *int    `json:"maxConcurrentViewers,omitempty"`
+	ExtendMinutes        *int    `json:"extendMinutes,omitempty"`
 	Password             *string `json:"password,omitempty"`
-	RemovePassword       bool   `json:"removePassword,omitempty"`
+	RemovePassword       bool    `json:"removePassword,omitempty"`
 }
