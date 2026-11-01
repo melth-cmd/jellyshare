@@ -27,6 +27,10 @@
   shares are visible while testing.
 - The create form exposes the same terms the API already accepts: expiry, never
   expires, play limit, concurrent viewers, quality cap, password, downloads.
+- Bulk actions work on explicitly selected rows: revoke, extend/add plays, and
+  delete. Delete is only allowed for inactive links.
+- Stale links are deleted after 365 days past expiry or revocation, adjustable
+  with `JFSHARE_SHARE_RETENTION_DAYS`.
 
 ## Iterating without rebuilding the compose stack
 
@@ -110,16 +114,21 @@ screens the wordmark text and link count give way to the tabs and actions.
 
 ### Step 3 — Shares tab: Active / Inactive / All
 
-- [ ] Add a `status=active|inactive|all` query parameter to
+- [x] Add a `status=active|inactive|all` query parameter to
       `GET /api/admin/shares`, applied in `GetSharesPage` and `CountShares`.
-- [ ] Treat inactive as revoked, expired, or play limit spent.
-- [ ] Return counts for the current filter so the header is accurate.
-- [ ] Add the segmented filter to the Shares tab and reset pagination when it
+- [x] Treat inactive as revoked, expired, or play limit spent.
+- [x] Return counts for the current filter so the header is accurate.
+- [x] Add the segmented filter to the Shares tab and reset pagination when it
       changes.
-- [ ] Keep Revoke and the detail sheet working in every filter.
+- [x] Keep Revoke and the detail sheet working in every filter.
 
 Done when: selecting Inactive shows only dead links, All shows everything, and
 the Active count matches the real live links.
+
+Status: done. The API returns `counts {active, inactive, all}` and the UI shows
+them on the filter buttons. Revoking from Active removes the row in place and
+moves the count to Inactive. Verified with a test share in the dev database:
+created → Active 1, revoked → Active 0, then deleted the test row.
 
 ### Step 4 — Create share form
 
@@ -137,19 +146,64 @@ the Active count matches the real live links.
 Done when: a share created from the admin page opens and plays through the
 existing public share page.
 
-### Step 5 — Copy and empty states
+### Step 5 — Bulk selection and actions
+
+Feasible now that the list has a stable filter. Selection is frontend state;
+the actions get dedicated endpoints so a partial failure is reported honestly.
+
+- [ ] Add a checkbox column to the Shares rows, plus a select-all box for the
+      loaded page.
+- [ ] Support shift-click range selection across the rows currently loaded.
+- [ ] Clear selection when the tab or Active/Inactive/All filter changes, after
+      an action, and when the list is reloaded.
+- [ ] Show a selection bar when anything is selected: count, Revoke, Edit,
+      Delete, Clear.
+- [ ] Bulk revoke: `POST /api/admin/shares/bulk/revoke` with `{ "ids": [...] }`
+      in one SQL statement, returning which ids changed.
+- [ ] Bulk edit, limited to fields that make sense across different links:
+      extend expiry by N days and add plays. No bulk password or quality.
+- [ ] Bulk delete: `POST /api/admin/shares/bulk/delete`, allowed only for
+      inactive links. Cascades sessions and progress; audit rows keep their
+      history because `share_id` is set NULL.
+- [ ] Individual edit in the detail sheet using the existing `PATCH
+      /api/admin/shares/{id}`.
+- [ ] Confirm before revoke and delete; report skipped/failed ids.
+
+Done when: ticking a few shares and choosing Revoke, Extend, or Delete does what
+the label says, shift-click selects the range, and refresh shows the result.
+
+### Step 6 — Retention cleanup for stale links
+
+Expiry already makes a link dead; there is no need to also mark it revoked. The
+useful cleanup is deleting the row after it has been dead long enough.
+
+- [ ] Add `JFSHARE_SHARE_RETENTION_DAYS`, default 365.
+- [ ] Replace the unused `CleanupExpiredShares` with
+      `DeleteStaleShares(ctx, retention)`: delete where `expires_at` or
+      `revoked_at` is older than the cutoff. Never-expiring, non-revoked links
+      are never touched.
+- [ ] Run it from the existing five-minute cleanup loop and log how many rows
+      went.
+- [ ] Document the setting in `.env.example` and the README.
+
+Done when: an old expired or revoked link disappears after the retention
+window, while live and never-expiring links stay.
+
+### Step 7 — Copy and empty states
 
 - [ ] Update dashboard copy that still implies links are created from Jellyfin.
 - [ ] Empty states per tab and per filter.
 - [ ] Make sure errors and disabled states are understandable.
+- [ ] Selection bar and checkboxes work on phone widths.
 
-### Step 6 — Docs and verification
+### Step 8 — Docs and verification
 
 - [ ] Update `SPEC.md` to match what was built.
 - [ ] Update `README.md` admin section with the new flow and dev workflow.
 - [ ] Run `go build ./...`, `go test ./...`, and `cd web && npm run build`.
 - [ ] Manual checklist: create movie share, create series share, password link,
-      expiry, play limit, revoke, filter switching, mobile layout.
+      expiry, play limit, revoke one, bulk revoke, bulk extend, bulk delete,
+      filter switching, retention cleanup, mobile layout.
 - [ ] Commit and push to `origin main`.
 
 ## Testing notes
@@ -180,3 +234,6 @@ existing public share page.
   and a poster proxy, plus client and handler tests.
 - Step 2 done: Create/Shares tabs in the top pill, `CreatePanel` placeholder, and
   tab state kept in `sessionStorage`. Frontend build passes.
+- Step 3 done: server-side Active/Inactive/All filter with counts, filter buttons
+  in the Shares tab, and revoked rows leave the Active view in place. Added bulk
+  actions and retention cleanup to the plan as Steps 5 and 6.

@@ -152,28 +152,80 @@ func (h *AdminHandler) CreateShare(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, resp)
 }
 
+func normalizeShareStatus(raw string) string {
+	switch raw {
+	case "active", "inactive":
+		return raw
+	default:
+		return "all"
+	}
+}
+
+func filterSharesByStatus(shares []models.Share, status string) []models.Share {
+	if status == "all" {
+		return shares
+	}
+	filtered := make([]models.Share, 0, len(shares))
+	for _, share := range shares {
+		active := share.IsActive()
+		if (status == "active") == active {
+			filtered = append(filtered, share)
+		}
+	}
+	return filtered
+}
+
+func countShares(shares []models.Share) (total, active int) {
+	for _, share := range shares {
+		if share.IsActive() {
+			active++
+		}
+	}
+	return len(shares), active
+}
+
 func (h *AdminHandler) ListShares(w http.ResponseWriter, r *http.Request) {
-	jellyfinUserID := r.URL.Query().Get("jellyfinUserId")
+	q := r.URL.Query()
+	jellyfinUserID := q.Get("jellyfinUserId")
+	status := normalizeShareStatus(q.Get("status"))
 
 	var shares []models.Share
 	var err error
 	total, live, hasMore := 0, 0, false
+	counts := map[string]int{"all": 0, "active": 0, "inactive": 0}
 
 	if jellyfinUserID != "" {
-		// A user's own links come back whole.
-		shares, err = h.db.GetSharesByUser(r.Context(), jellyfinUserID)
+		// A user's own links come back whole, so filter them in memory.
+		var all []models.Share
+		all, err = h.db.GetSharesByUser(r.Context(), jellyfinUserID)
+		if err == nil {
+			allTotal, allActive := countShares(all)
+			counts["all"] = allTotal
+			counts["active"] = allActive
+			counts["inactive"] = allTotal - allActive
+
+			shares = filterSharesByStatus(all, status)
+			total = len(shares)
+			live = allActive
+		}
 	} else {
 		// The index loads a page at a time, newest first, continuing below the
-		// last link it holds, and is told how many links there are in all and how
-		// many are live - it cannot count what it has not loaded. One row more
-		// than asked for says whether another page follows.
-		q := r.URL.Query()
+		// last link it holds, and is told how many links match the filter - it
+		// cannot count what it has not loaded. One row more than asked for says
+		// whether another page follows.
 		limit, after := models.ParsePage(q.Get("limit"), q.Get("beforeCreatedAt"), q.Get("beforeId"))
-		shares, err = h.db.GetSharesPage(r.Context(), limit+1, after)
+		shares, err = h.db.GetSharesPage(r.Context(), limit+1, after, status)
 		if err == nil {
 			hasMore = len(shares) > limit
 			shares = shares[:min(len(shares), limit)]
-			total, live, err = h.db.CountShares(r.Context())
+
+			var allTotal, allActive int
+			allTotal, allActive, err = h.db.CountShares(r.Context())
+			counts["all"] = allTotal
+			counts["active"] = allActive
+			counts["inactive"] = allTotal - allActive
+			total = counts[status]
+			live = allActive
 		}
 	}
 
@@ -198,8 +250,8 @@ func (h *AdminHandler) ListShares(w http.ResponseWriter, r *http.Request) {
 			HasPassword:              s.RequiresPassword(),
 			// The effective permission, as viewers meet it - not the stored choice
 			// alone, which the server-wide switch can override.
-			AllowDownload:            s.DownloadsAllowed(h.cfg.AllowDownloads),
-			PublicURL:                h.cfg.PublicBaseURL + "/s/" + s.PublicToken,
+			AllowDownload: s.DownloadsAllowed(h.cfg.AllowDownloads),
+			PublicURL:     h.cfg.PublicBaseURL + "/s/" + s.PublicToken,
 		}
 		if s.MaxTotalPlays.Valid {
 			item.MaxTotalPlays = &s.MaxTotalPlays.Int64
@@ -216,19 +268,12 @@ func (h *AdminHandler) ListShares(w http.ResponseWriter, r *http.Request) {
 		items = append(items, item)
 	}
 
-	if jellyfinUserID != "" {
-		total = len(items)
-		for _, s := range shares {
-			if s.IsValid() {
-				live++
-			}
-		}
-	}
-
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"shares":  items,
 		"total":   total,
 		"live":    live,
+		"counts":  counts,
+		"status":  status,
 		"hasMore": hasMore,
 	})
 }

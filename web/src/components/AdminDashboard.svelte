@@ -17,6 +17,9 @@
   let shares = [];
   let total = 0;
   let live = 0;
+  let counts = { active: 0, inactive: 0, all: 0 };
+  // Active by default: the index is for links that still work.
+  let statusFilter = 'active';
   let hasMore = false;
   let loadingMore = false;
   let moreError = '';
@@ -55,7 +58,7 @@
   // The next page continues below the last link held, not at a row number, so
   // links created or cleaned up in between cannot shift or repeat rows.
   async function fetchPage(after) {
-    const query = new URLSearchParams({ limit: String(PAGE_SIZE) });
+    const query = new URLSearchParams({ limit: String(PAGE_SIZE), status: statusFilter });
     if (after) {
       query.set('beforeCreatedAt', after.createdAt);
       query.set('beforeId', after.id);
@@ -65,7 +68,13 @@
     });
     if (!response.ok) throw new Error('The backend refused the request. Check the key is still valid.');
     const data = await response.json();
-    return { shares: data.shares || [], total: data.total ?? 0, live: data.live ?? 0, hasMore: !!data.hasMore };
+    return {
+      shares: data.shares || [],
+      total: data.total ?? 0,
+      live: data.live ?? 0,
+      counts: data.counts || { active: 0, inactive: 0, all: 0 },
+      hasMore: !!data.hasMore
+    };
   }
 
   async function loadShares() {
@@ -76,12 +85,18 @@
     error = null;
     moreError = '';
     try {
-      ({ shares, total, live, hasMore } = await fetchPage(null));
+      ({ shares, total, live, counts, hasMore } = await fetchPage(null));
     } catch (e) {
       error = e.message;
     } finally {
       loading = false;
     }
+  }
+
+  function setStatusFilter(status) {
+    if (status === statusFilter) return;
+    statusFilter = status;
+    loadShares();
   }
 
   // Bumped by every reload, so a page still loading from before it is dropped
@@ -143,9 +158,19 @@
         headers: { 'X-Backend-Key': apiKey }
       });
       if (!response.ok) throw new Error('revoke failed');
-      // Marked in place: reloading would drop every page loaded below the first.
-      if (getStatus(share) === 'active') live = Math.max(0, live - 1);
-      shares = shares.map((s) => (s.id === share.id ? { ...s, revokedAt: new Date().toISOString() } : s));
+      const wasActive = getStatus(share) === 'active';
+      if (wasActive) {
+        live = Math.max(0, live - 1);
+        counts = { ...counts, active: Math.max(0, counts.active - 1), inactive: counts.inactive + 1 };
+      }
+      if (wasActive && statusFilter === 'active') {
+        // The row no longer belongs in this view. Removing it in place keeps the
+        // pages already loaded below it instead of reloading the whole index.
+        shares = shares.filter((s) => s.id !== share.id);
+        total = Math.max(0, total - 1);
+      } else {
+        shares = shares.map((s) => (s.id === share.id ? { ...s, revokedAt: new Date().toISOString() } : s));
+      }
       if (selectedShare?.id === share.id) closeDetails();
     } catch (e) {
       revokeError = `Couldn’t revoke “${share.title}”. The link is still live — try again.`;
@@ -174,6 +199,7 @@
   function getStatus(share) {
     if (share.revokedAt) return 'revoked';
     if (share.expiresAt && new Date(share.expiresAt) < new Date()) return 'expired';
+    if (share.maxTotalPlays != null && share.totalPlays >= share.maxTotalPlays) return 'spent';
     return 'active';
   }
 
@@ -270,11 +296,31 @@
   {#if activeTab === 'shares'}
   <main class="index" id="panel-shares" role="tabpanel" aria-labelledby="tab-shares">
     <p class="index__lede">
-      Every link you have handed out, and what it is doing right now.
-      {#if !loading && !error && shares.length > 0}
-        <span class="index__live">{live} of {total} still live.</span>
+      {#if statusFilter === 'active'}
+        Links that still work right now.
+      {:else if statusFilter === 'inactive'}
+        Revoked, expired, and used-up links.
+      {:else}
+        Every link you have handed out, and what it is doing right now.
+      {/if}
+      {#if !loading && !error && total > 0}
+        <span class="index__live">
+          {statusFilter === 'all' ? `${live} of ${total} still live.` : `${total} ${total === 1 ? 'link' : 'links'}.`}
+        </span>
       {/if}
     </p>
+
+    <div class="filters" role="group" aria-label="Filter links">
+      <button class="filter" class:filter--active={statusFilter === 'active'} aria-pressed={statusFilter === 'active'} on:click={() => setStatusFilter('active')}>
+        Active<span class="filter__n">{counts.active}</span>
+      </button>
+      <button class="filter" class:filter--active={statusFilter === 'inactive'} aria-pressed={statusFilter === 'inactive'} on:click={() => setStatusFilter('inactive')}>
+        Inactive<span class="filter__n">{counts.inactive}</span>
+      </button>
+      <button class="filter" class:filter--active={statusFilter === 'all'} aria-pressed={statusFilter === 'all'} on:click={() => setStatusFilter('all')}>
+        All<span class="filter__n">{counts.all}</span>
+      </button>
+    </div>
 
     {#if loading}
       <div class="state">
@@ -288,8 +334,16 @@
       </div>
     {:else if shares.length === 0}
       <div class="state">
-        <p class="state__head">No links yet.</p>
-        <p>Create one from the Create tab and it will appear here.</p>
+        {#if statusFilter === 'active'}
+          <p class="state__head">No live links.</p>
+          <p>Create one from the Create tab and it will appear here.</p>
+        {:else if statusFilter === 'inactive'}
+          <p class="state__head">Nothing inactive.</p>
+          <p>Revoked, expired, and used-up links collect here.</p>
+        {:else}
+          <p class="state__head">No links yet.</p>
+          <p>Create one from the Create tab and it will appear here.</p>
+        {/if}
       </div>
     {:else}
       {#if revokeError}
@@ -368,7 +422,7 @@
   <footer class="colophon">
     <p class="colophon__line">
       <a class="foot-link" href="https://github.com/melth-cmd/jellyfin-share-backend" target="_blank" rel="noopener noreferrer">Jellyfin Share</a>
-      · admin · {total} indexed, {live} live
+      · admin · {counts.all} indexed, {counts.active} live
     </p>
     <p class="colophon__note">
       The backend key is kept in this browser’s localStorage and sent only as an
@@ -602,6 +656,48 @@
   }
 
   .index__live { color: var(--color-ink-2); }
+
+  .filters {
+    display: inline-flex;
+    gap: 0.125rem;
+    padding: 0.15rem;
+    margin-bottom: var(--space-xl);
+    background: var(--color-paper-3);
+    border-radius: var(--radius-pill);
+  }
+
+  .filter {
+    min-height: 2.1rem;
+    padding-inline: var(--space-md);
+    background: none;
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    white-space: nowrap;
+    border: none;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: background-color var(--dur-micro) var(--ease-out),
+                color var(--dur-micro) var(--ease-out);
+  }
+
+  .filter--active { background: var(--color-paper-2); color: var(--color-ink); }
+
+  .filter__n {
+    margin-inline-start: 0.4rem;
+    font-family: var(--font-outlier);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-neutral);
+  }
+
+  .filter--active .filter__n { color: var(--color-ink-2); }
+
+  @media (hover: hover) {
+    .filter:hover:not(.filter--active) { color: var(--color-ink); }
+  }
+
+  .filter:active { transform: translateY(1px); }
 
   .labels {
     display: none;
