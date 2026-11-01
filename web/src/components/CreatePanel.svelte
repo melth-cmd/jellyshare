@@ -113,14 +113,6 @@
     return next;
   }
 
-  function seriesOpen(id) {
-    return expandedSeries.has(id);
-  }
-
-  function seasonOpen(id) {
-    return expandedSeasons.has(id);
-  }
-
   async function toggleSeries(id) {
     expandedSeries = toggleIn(expandedSeries, id);
     if (expandedSeries.has(id)) await loadSeasons(id);
@@ -447,11 +439,11 @@
                         <button
                           class="node__toggle"
                           type="button"
-                          aria-expanded={seriesOpen(item.id)}
+                          aria-expanded={expandedSeries.has(item.id)}
                           aria-controls="series-{item.id}"
                           on:click={() => toggleSeries(item.id)}
                         >
-                          <svg class="chevron" class:chevron--open={seriesOpen(item.id)} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                          <svg class="chevron" class:chevron--open={expandedSeries.has(item.id)} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                             <path d="M9 6l6 6-6 6" />
                           </svg>
                           <span class="pick__poster">
@@ -465,7 +457,7 @@
                         <button class="share-btn" type="button" on:click={() => choose(item)}>Share series</button>
                       </div>
 
-                      {#if seriesOpen(item.id)}
+                      {#if expandedSeries.has(item.id)}
                         <div class="branch" id="series-{item.id}">
                           {#if seasonsLoading[item.id]}
                             <div class="pick-state">
@@ -499,11 +491,11 @@
                                   <button
                                     class="node__toggle node__toggle--season"
                                     type="button"
-                                    aria-expanded={seasonOpen(season.id)}
+                                    aria-expanded={expandedSeasons.has(season.id)}
                                     aria-controls="season-{season.id}"
                                     on:click={() => toggleSeason(season.id)}
                                   >
-                                    <svg class="chevron" class:chevron--open={seasonOpen(season.id)} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                    <svg class="chevron" class:chevron--open={expandedSeasons.has(season.id)} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                                       <path d="M9 6l6 6-6 6" />
                                     </svg>
                                     <span class="pick__text">
@@ -513,7 +505,7 @@
                                   <button class="share-btn" type="button" on:click={() => choose(season)}>Share season</button>
                                 </div>
 
-                                {#if seasonOpen(season.id)}
+                                {#if expandedSeasons.has(season.id)}
                                   <div class="branch branch--episodes" id="season-{season.id}">
                                     {#if episodesLoading[season.id]}
                                       <div class="pick-state">
