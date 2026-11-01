@@ -154,7 +154,55 @@ Create another, and View in Shares. Verified by creating a share through the API
 without a user id, checking its settings in the Active list, and deleting the
 test rows.
 
-### Step 5 — Selection, mass actions, and per-share actions
+### Step 5 — Series-first picker (revise Step 4)
+
+Why the current picker misses things: the Jellyfin search endpoint matches each
+item's own name. A series matches its title, but its seasons are named "Season
+1" and its episodes are named after the episode, so neither contains the series
+title. Searching "smith" returns *Mr. & Mrs. Smith* as a series but none of its
+episodes; browsing its children returns all 8. Flat search is also capped at 20
+and mixes in unrelated episodes whose titles match, which crowds out what the
+admin was looking for.
+
+That is not lost data - it is the wrong access pattern. Browse the tree instead
+of searching it flat.
+
+- [ ] Narrow the search to top-level items: `Movie,Series` only. Empty query
+      still lists recently added films and series. Update the client tests.
+- [ ] Add `GET /api/admin/jellyfin/series/{id}/seasons`: id, name, season
+      number, poster flag, sorted by number. Include Specials (season 0).
+- [ ] Add `GET /api/admin/jellyfin/seasons/{id}/episodes`: id, name, episode
+      number, overview, runtime, poster flag, sorted by number.
+- [ ] Add `BrowseSeasons` / `BrowseEpisodes` to the Jellyfin client. Map to the
+      same picker row shape as `SearchItem`; do not disturb the existing public
+      episode code.
+- [ ] Fallback: if a series returns no Season children, fetch its episodes
+      recursively and show one "Episodes" group. The series itself stays
+      shareable.
+- [ ] Series result row: poster, title, year, a disclosure chevron, and a
+      **Share series** button. Expanding it loads seasons lazily.
+- [ ] Season row: name ("Season 1", "Specials"), a disclosure chevron, and a
+      **Share season** button. Expanding it loads episodes lazily.
+- [ ] Episode row: clicking it selects that episode. No extra expand step.
+- [ ] Cache seasons and episodes per id for the life of the panel; the Refresh
+      button clears the cache and reloads the current search. Multiple series
+      and seasons may be open at once.
+- [ ] Keep expansion state when the admin chooses an item and then presses
+      **Change item**.
+- [ ] Loading and error states inside each expanded node, with a retry that only
+      retries that node.
+- [ ] Accessibility: real buttons, `aria-expanded` on disclosure controls, no
+      nested interactive elements, keyboard reachable.
+- [ ] Responsive: indent the tree on phones; keep the result list scrollable
+      rather than growing the page without bound.
+- [ ] Tests: client query/mapping for seasons and episodes, handler tests, and a
+      live check against a multi-season series plus one with specials.
+
+Done when: searching a series shows it; expanding shows every season; expanding
+a season shows every episode; and sharing a series, a season, or an episode all
+work from the tree.
+
+### Step 6 — Selection, mass actions, and per-share actions
 
 Selection is frontend state; the mass actions get dedicated endpoints so a
 partial failure is reported honestly. There is no bulk edit.
@@ -184,7 +232,7 @@ Done when: ticking a few shares and choosing Revoke or Delete does what the
 label says, shift-click selects the range, and each row can be edited or revoked
 on its own.
 
-### Step 6 — Retention cleanup for stale links
+### Step 7 — Retention cleanup for stale links
 
 Expiry already makes a link dead; there is no need to also mark it revoked. The
 useful cleanup is deleting the row after it has been dead long enough.
@@ -201,14 +249,14 @@ useful cleanup is deleting the row after it has been dead long enough.
 Done when: an old expired or revoked link disappears after the retention
 window, while live and never-expiring links stay.
 
-### Step 7 — Copy and empty states
+### Step 8 — Copy and empty states
 
 - [ ] Update dashboard copy that still implies links are created from Jellyfin.
 - [ ] Empty states per tab and per filter.
 - [ ] Make sure errors and disabled states are understandable.
 - [ ] Selection bar and checkboxes work on phone widths.
 
-### Step 8 — Docs and verification
+### Step 9 — Docs and verification
 
 - [ ] Update `SPEC.md` to match what was built.
 - [ ] Update `README.md` admin section with the new flow and dev workflow.
@@ -248,8 +296,12 @@ window, while live and never-expiring links stay.
   tab state kept in `sessionStorage`. Frontend build passes.
 - Step 3 done: server-side Active/Inactive/All filter with counts, filter buttons
   in the Shares tab, and revoked rows leave the Active view in place. Added bulk
-  actions and retention cleanup to the plan as Steps 5 and 6.
+  actions and retention cleanup to the plan, now Steps 6 and 7.
 - Step 4 done: create form with library picker, posters, terms, quality, password,
   downloads, success/copy state, and automatic Jellyfin user assignment. Shared
   clipboard helper works over plain HTTP on the LAN. Frontend build and API
   creation checks pass.
+- Diagnosed missing seasons/episodes in the picker: Jellyfin's flat search
+  matches each item's own name, so a series title never matches its seasons or
+  episodes. Added Step 5: a series-first, collapsible tree that browses seasons
+  and episodes instead of searching for them.
