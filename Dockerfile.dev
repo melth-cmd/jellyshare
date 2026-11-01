@@ -3,8 +3,7 @@ FROM golang:1.23-bookworm
 
 # Install Node.js 20
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    && npm install -g npm@latest
+    && apt-get install -y nodejs
 
 # Install air for hot reload
 RUN go install github.com/air-verse/air@v1.61.0

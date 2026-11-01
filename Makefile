@@ -1,4 +1,4 @@
-.PHONY: help demo-up demo-down demo-reset dev dev-up dev-down dev-logs dev-shell prod prod-up prod-down prod-logs build clean test
+.PHONY: help demo-up demo-down demo-reset dev dev-up dev-down dev-logs dev-shell dev-db-sync prod prod-up prod-down prod-logs build clean test
 
 # Default target
 help:
@@ -15,6 +15,7 @@ help:
 	@echo "  make dev-logs    - View development logs"
 	@echo "  make dev-shell   - Open shell in dev container"
 	@echo "  make dev-rebuild - Rebuild dev container"
+	@echo "  make dev-db-sync - Copy production data into the dev database"
 	@echo ""
 	@echo "Production:"
 	@echo "  make prod-up     - Build and start production"
@@ -47,7 +48,7 @@ dev-up:
 	docker-compose -f docker-compose.dev.yml up -d
 	@echo ""
 	@echo "Development environment starting..."
-	@echo "  Backend:  http://localhost:8097"
+	@echo "  Backend:  http://localhost:8098 (production keeps 8097)"
 	@echo "  Frontend: http://localhost:5173"
 	@echo "  pgAdmin:  http://localhost:5050 (run with: make dev-pgadmin)"
 	@echo ""
@@ -58,6 +59,9 @@ dev-down:
 
 dev-logs:
 	docker-compose -f docker-compose.dev.yml logs -f dev
+
+dev-db-sync:
+	scripts/sync-dev-db.sh
 
 dev-shell:
 	docker-compose -f docker-compose.dev.yml exec dev bash

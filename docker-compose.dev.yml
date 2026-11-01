@@ -1,4 +1,3 @@
-version: '3.8'
 
 # Development environment with hot reload
 # Usage: docker-compose -f docker-compose.dev.yml up
@@ -15,7 +14,7 @@ services:
       - go-build-cache:/root/.cache/go-build
       - node-modules:/workspace/web/node_modules
     ports:
-      - "8097:8097"   # Backend (next to Jellyfin 8096)
+      - "8098:8097"   # Backend on the host; production keeps 8097
       - "5173:5173"   # Vite dev server
     environment:
       - JFSHARE_PORT=8097
@@ -23,7 +22,7 @@ services:
       - JFSHARE_JELLYFIN_BASE_URL=${JELLYFIN_URL:-http://host.docker.internal:8096}
       - JFSHARE_JELLYFIN_API_KEY=${JELLYFIN_API_KEY:-your-api-key}
       - JFSHARE_BACKEND_API_KEY=${BACKEND_API_KEY:-dev-backend-key-change-in-prod}
-      - JFSHARE_PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-http://localhost:8097}
+      - JFSHARE_PUBLIC_BASE_URL=${DEV_PUBLIC_BASE_URL:-http://localhost:8098}
       - JFSHARE_LOG_LEVEL=debug
     depends_on:
       postgres:
