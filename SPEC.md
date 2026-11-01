@@ -73,9 +73,10 @@ Match `models.CreateShareRequest`:
 - Counts reflect the selected filter.
 - Revoke and detail views work in every filter.
 - Rows can be selected with checkboxes; shift-click selects a range.
-- Bulk actions: revoke, extend expiry / add plays, and delete. Delete is only
-  allowed for inactive links.
-- Individual links can be edited from the detail sheet.
+- A mass-action bar at the top of the list offers revoke and delete for the
+  selection. There is no bulk edit. Delete is only allowed for inactive links.
+- Each row has Copy link, Edit, and Revoke buttons. Edit opens a dialog for
+  expiry, play limit, concurrent viewers, and password.
 
 ### Retention
 

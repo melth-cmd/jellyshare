@@ -27,8 +27,8 @@
   shares are visible while testing.
 - The create form exposes the same terms the API already accepts: expiry, never
   expires, play limit, concurrent viewers, quality cap, password, downloads.
-- Bulk actions work on explicitly selected rows: revoke, extend/add plays, and
-  delete. Delete is only allowed for inactive links.
+- Mass actions work on explicitly selected rows: revoke or delete. There is no
+  bulk edit; editing is per share. Delete is only allowed for inactive links.
 - Stale links are deleted after 365 days past expiry or revocation, adjustable
   with `JFSHARE_SHARE_RETENTION_DAYS`.
 
@@ -146,31 +146,35 @@ created → Active 1, revoked → Active 0, then deleted the test row.
 Done when: a share created from the admin page opens and plays through the
 existing public share page.
 
-### Step 5 — Bulk selection and actions
+### Step 5 — Selection, mass actions, and per-share actions
 
-Feasible now that the list has a stable filter. Selection is frontend state;
-the actions get dedicated endpoints so a partial failure is reported honestly.
+Selection is frontend state; the mass actions get dedicated endpoints so a
+partial failure is reported honestly. There is no bulk edit.
 
 - [ ] Add a checkbox column to the Shares rows, plus a select-all box for the
       loaded page.
 - [ ] Support shift-click range selection across the rows currently loaded.
 - [ ] Clear selection when the tab or Active/Inactive/All filter changes, after
       an action, and when the list is reloaded.
-- [ ] Show a selection bar when anything is selected: count, Revoke, Edit,
-      Delete, Clear.
-- [ ] Bulk revoke: `POST /api/admin/shares/bulk/revoke` with `{ "ids": [...] }`
+- [ ] Add a persistent mass-action bar at the top of the Shares tab, under the
+      filter: select-all, "N selected", Revoke selected, Delete selected, Clear.
+      Actions stay disabled until something is selected.
+- [ ] Mass revoke: `POST /api/admin/shares/bulk/revoke` with `{ "ids": [...] }`
       in one SQL statement, returning which ids changed.
-- [ ] Bulk edit, limited to fields that make sense across different links:
-      extend expiry by N days and add plays. No bulk password or quality.
-- [ ] Bulk delete: `POST /api/admin/shares/bulk/delete`, allowed only for
+- [ ] Mass delete: `POST /api/admin/shares/bulk/delete`, allowed only for
       inactive links. Cascades sessions and progress; audit rows keep their
-      history because `share_id` is set NULL.
-- [ ] Individual edit in the detail sheet using the existing `PATCH
-      /api/admin/shares/{id}`.
-- [ ] Confirm before revoke and delete; report skipped/failed ids.
+      history because `share_id` is set NULL. Report skipped ids.
+- [ ] Per-share buttons next to each row: Copy link, Edit, Revoke. Revoke keeps
+      its inline confirm.
+- [ ] Individual edit opens a dialog using the existing
+      `PATCH /api/admin/shares/{id}`: extend expiry, change the play limit,
+      change concurrent viewers, set or remove the password. Works from the
+      detail sheet too.
+- [ ] Confirm before mass revoke and mass delete.
 
-Done when: ticking a few shares and choosing Revoke, Extend, or Delete does what
-the label says, shift-click selects the range, and refresh shows the result.
+Done when: ticking a few shares and choosing Revoke or Delete does what the
+label says, shift-click selects the range, and each row can be edited or revoked
+on its own.
 
 ### Step 6 — Retention cleanup for stale links
 
@@ -202,7 +206,7 @@ window, while live and never-expiring links stay.
 - [ ] Update `README.md` admin section with the new flow and dev workflow.
 - [ ] Run `go build ./...`, `go test ./...`, and `cd web && npm run build`.
 - [ ] Manual checklist: create movie share, create series share, password link,
-      expiry, play limit, revoke one, bulk revoke, bulk extend, bulk delete,
+      expiry, play limit, revoke one, edit one, mass revoke, mass delete,
       filter switching, retention cleanup, mobile layout.
 - [ ] Commit and push to `origin main`.
 
