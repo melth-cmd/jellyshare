@@ -48,8 +48,8 @@ dev-up:
 	docker-compose -f docker-compose.dev.yml up -d
 	@echo ""
 	@echo "Development environment starting..."
-	@echo "  Backend:  http://localhost:8098 (production keeps 8097)"
-	@echo "  Frontend: http://localhost:5173"
+	@echo "  Backend:  http://192.168.1.133:8098 (production keeps 8097)"
+	@echo "  Frontend: http://192.168.1.133:5173"
 	@echo "  pgAdmin:  http://localhost:5050 (run with: make dev-pgadmin)"
 	@echo ""
 	@echo "Run 'make dev-logs' to see logs"

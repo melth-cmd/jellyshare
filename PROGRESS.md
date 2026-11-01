@@ -39,7 +39,7 @@ make dev-up                  # once per session
 scripts/sync-dev-db.sh       # optional, refresh data from production
 ```
 
-- Open `http://localhost:5173/admin` for the UI (Vite HMR).
+- Open `http://192.168.1.133:5173/admin` for the UI (Vite HMR).
 - Go edits rebuild and restart the dev server automatically via `air`.
 - SQL migration edits also restart the dev server; migrations run at startup.
 - Production stays up at `http://localhost:8097` and is untouched.
@@ -64,8 +64,8 @@ talks to the real Jellyfin library. Picking a real film or series works in dev.
 Done when: editing a Go file and a Svelte file is reflected in the browser with
 no compose rebuild, and dev data matches production after a sync.
 
-Status: done. Dev backend is on `http://localhost:8098`, Vite on
-`http://localhost:5173`, and the sync script copies production data. Go changes
+Status: done. Dev backend is on `http://192.168.1.133:8098`, Vite on
+`http://192.168.1.133:5173`, and the sync script copies production data. Go changes
 rebuild via `air`; Svelte changes are served by Vite immediately.
 
 ### Step 1 — Backend: Jellyfin library search
@@ -148,11 +148,11 @@ existing public share page.
 
   ```bash
   curl -s -H "X-Backend-Key: $BACKEND_API_KEY" \
-    "http://localhost:8098/api/admin/jellyfin/items?q=alien&limit=5"
+    "http://192.168.1.133:8098/api/admin/jellyfin/items?q=alien&limit=5"
   ```
 
-- Dev UI: `http://localhost:5173/admin`
-- Production UI: `http://localhost:8097/admin`
+- Dev UI: `http://192.168.1.133:5173/admin`
+- Production UI: `http://192.168.1.133:8097/admin`
 
 ## Log
 

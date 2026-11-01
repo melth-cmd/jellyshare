@@ -27,7 +27,7 @@ go test ./...
 cd web && npm install && npm run build
 
 # Dev stack (Docker, hot reload)
-make dev-up          # backend :8098, frontend :5173
+make dev-up          # backend 192.168.1.133:8098, frontend :5173
 make dev-logs
 make dev-down
 
