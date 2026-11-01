@@ -70,17 +70,24 @@ rebuild via `air`; Svelte changes are served by Vite immediately.
 
 ### Step 1 — Backend: Jellyfin library search
 
-- [ ] Add `SearchItems` to `internal/jellyfin/client.go`, using the Jellyfin
+- [x] Add `SearchItems` to `internal/jellyfin/client.go`, using the Jellyfin
       `/Items` endpoint with `recursive=true` and
       `includeItemTypes=Movie,Series,Season,Episode`.
-- [ ] Return the fields the picker needs: id, name, type, year, series/season
-      names, overview, runtime, poster URL.
-- [ ] Add `GET /api/admin/jellyfin/items?q=...&limit=...` under the existing
+- [x] Return the fields the picker needs: id, name, type, year, series/season
+      names, overview, runtime, and whether a poster exists.
+- [x] Add `GET /api/admin/jellyfin/items?q=...&limit=...` under the existing
       admin auth middleware.
-- [ ] Add handler tests with an `httptest` Jellyfin stub.
+- [x] Add handler tests with an `httptest` Jellyfin stub.
+
+- [x] Add `GET /api/admin/jellyfin/items/{id}/poster` so the picker can show
+      posters without exposing the Jellyfin key to the browser.
 
 Done when: a search for part of a real title returns usable rows, and an empty
 query returns a sensible default (recent items or an empty prompt).
+
+Status: done. Search and poster proxying are live on the dev stack. Verified
+against the real library: recent items, a title search, poster bytes, and 401
+without the admin key. Client tests cover query building and field mapping.
 
 ### Step 2 — Admin shell and tabs
 
@@ -164,3 +171,5 @@ existing public share page.
   copies production data. Fixed the dev image build (Node 20 + npm latest was
   incompatible) and `air` building with VCS stamping inside the container.
 - Verified hot reload for Go and Svelte and synced the dev database.
+- Step 1 done: `SearchItems` in the Jellyfin client, `GET /api/admin/jellyfin/items`
+  and a poster proxy, plus client and handler tests.

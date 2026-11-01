@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -103,18 +105,18 @@ type PersonInfo struct {
 }
 
 type MediaSource struct {
-	ID                   string         `json:"Id"`
-	Name                 string         `json:"Name,omitempty"`
-	Container            string         `json:"Container,omitempty"`
+	ID        string `json:"Id"`
+	Name      string `json:"Name,omitempty"`
+	Container string `json:"Container,omitempty"`
 	// Path is the file on the Jellyfin host. Only its extension is ever used - it
 	// names a download - and the path itself never leaves the backend.
-	Path                 string         `json:"Path,omitempty"`
-	Size                 int64          `json:"Size,omitempty"`
-	Bitrate              int            `json:"Bitrate,omitempty"`
-	SupportsDirectPlay   bool           `json:"SupportsDirectPlay"`
-	SupportsDirectStream bool           `json:"SupportsDirectStream"`
-	SupportsTranscoding  bool           `json:"SupportsTranscoding"`
-	MediaStreams         []MediaStream  `json:"MediaStreams,omitempty"`
+	Path                 string        `json:"Path,omitempty"`
+	Size                 int64         `json:"Size,omitempty"`
+	Bitrate              int           `json:"Bitrate,omitempty"`
+	SupportsDirectPlay   bool          `json:"SupportsDirectPlay"`
+	SupportsDirectStream bool          `json:"SupportsDirectStream"`
+	SupportsTranscoding  bool          `json:"SupportsTranscoding"`
+	MediaStreams         []MediaStream `json:"MediaStreams,omitempty"`
 }
 
 type MediaStream struct {
@@ -132,12 +134,12 @@ type MediaStream struct {
 	IsForced     bool   `json:"IsForced,omitempty"`
 	// IsTextSubtitleStream separates srt/ass/mov_text, which can be converted to
 	// WebVTT, from image formats like PGS that can only be rendered into the picture.
-	IsText       bool   `json:"IsTextSubtitleStream,omitempty"`
+	IsText bool `json:"IsTextSubtitleStream,omitempty"`
 }
 
 type PlaybackInfo struct {
-	MediaSources []PlaybackMediaSource `json:"MediaSources"`
-	PlaySessionId string `json:"PlaySessionId"`
+	MediaSources  []PlaybackMediaSource `json:"MediaSources"`
+	PlaySessionId string                `json:"PlaySessionId"`
 }
 
 type PlaybackMediaSource struct {
@@ -165,7 +167,6 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 	return c.httpClient.Do(req)
 }
 
-
 func (c *Client) GetItem(ctx context.Context, itemID string) (*ItemInfo, error) {
 	if c.userID == "" {
 		return nil, fmt.Errorf("user ID not set - call FetchAndSetUserID first")
@@ -189,6 +190,91 @@ func (c *Client) GetItem(ctx context.Context, itemID string) (*ItemInfo, error) 
 	}
 
 	return &item, nil
+}
+
+// SearchItem is one row in the admin library picker. It carries only what the
+// picker shows; the share itself is built from the Jellyfin item id.
+type SearchItem struct {
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	Type           string `json:"type"`
+	Year           int    `json:"year,omitempty"`
+	SeriesName     string `json:"seriesName,omitempty"`
+	SeasonName     string `json:"seasonName,omitempty"`
+	SeasonNumber   int    `json:"seasonNumber,omitempty"`
+	EpisodeNumber  int    `json:"episodeNumber,omitempty"`
+	Overview       string `json:"overview,omitempty"`
+	RuntimeSeconds int64  `json:"runtimeSeconds,omitempty"`
+	HasPoster      bool   `json:"hasPoster"`
+}
+
+// SearchItems looks through the user's Jellyfin library. An empty query lists
+// recently added items instead, so the picker opens with something to choose.
+func (c *Client) SearchItems(ctx context.Context, query string, limit int) ([]SearchItem, error) {
+	if c.userID == "" {
+		return nil, fmt.Errorf("user ID not set - call FetchAndSetUserID first")
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+
+	params := url.Values{}
+	params.Set("Recursive", "true")
+	params.Set("IncludeItemTypes", "Movie,Series,Season,Episode")
+	params.Set("Fields", "Overview,ProductionYear,RunTimeTicks,SeriesName,SeasonName,IndexNumber,ParentIndexNumber,ImageTags")
+	params.Set("ImageTypeLimit", "1")
+	params.Set("EnableImageTypes", "Primary")
+	params.Set("Limit", strconv.Itoa(limit))
+	if query != "" {
+		params.Set("SearchTerm", query)
+		params.Set("SortBy", "SortName")
+	} else {
+		params.Set("SortBy", "DateCreated")
+		params.Set("SortOrder", "Descending")
+	}
+
+	path := fmt.Sprintf("/Users/%s/Items?%s", c.userID, params.Encode())
+	resp, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("jellyfin API returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	var result struct {
+		Items []ItemInfo `json:"Items"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode search results: %w", err)
+	}
+
+	items := make([]SearchItem, 0, len(result.Items))
+	for _, item := range result.Items {
+		row := SearchItem{
+			ID:             item.ID,
+			Name:           item.Name,
+			Type:           item.Type,
+			Year:           item.ProductionYear,
+			SeriesName:     item.SeriesName,
+			SeasonName:     item.SeasonName,
+			Overview:       item.Overview,
+			RuntimeSeconds: TicksToSeconds(item.RunTimeTicks),
+			HasPoster:      item.ImageTags.Primary != "",
+		}
+		switch item.Type {
+		case "Episode":
+			row.SeasonNumber = item.ParentIndexNumber
+			row.EpisodeNumber = item.IndexNumber
+		case "Season":
+			row.SeasonNumber = item.IndexNumber
+		}
+		items = append(items, row)
+	}
+	return items, nil
 }
 
 func (c *Client) GetPlaybackInfo(ctx context.Context, itemID string) (*PlaybackInfo, error) {
@@ -277,21 +363,21 @@ func TicksToSeconds(ticks int64) int64 {
 
 // EpisodeInfo contains basic info for an episode in a season
 type EpisodeInfo struct {
-	ID                string `json:"id"`
-	Name              string `json:"name"`
-	IndexNumber       int    `json:"indexNumber"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	IndexNumber int    `json:"indexNumber"`
 	// Overview is the episode's synopsis. Of the episode queries only
 	// GetEpisodeListFor asks Jellyfin for it.
-	Overview          string `json:"overview,omitempty"`
-	RuntimeSeconds    int64  `json:"runtimeSeconds,omitempty"`
-	HasPoster         bool   `json:"hasPoster"`
-	PremiereDate      string `json:"premiereDate,omitempty"`
+	Overview       string `json:"overview,omitempty"`
+	RuntimeSeconds int64  `json:"runtimeSeconds,omitempty"`
+	HasPoster      bool   `json:"hasPoster"`
+	PremiereDate   string `json:"premiereDate,omitempty"`
 	// SeasonNumber is the episode's season (Jellyfin's ParentIndexNumber), set
 	// on every list; the page names it only on a Series link, which spans seasons.
-	SeasonNumber      int    `json:"seasonNumber,omitempty"`
+	SeasonNumber int `json:"seasonNumber,omitempty"`
 	// SizeBytes is the episode's file, which a download hands over as it is. Only
 	// GetEpisodeListFor fills it.
-	SizeBytes         int64  `json:"sizeBytes,omitempty"`
+	SizeBytes int64 `json:"sizeBytes,omitempty"`
 }
 
 // ContainsEpisode is the check that keeps an episode request inside its share.
