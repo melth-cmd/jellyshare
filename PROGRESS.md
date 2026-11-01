@@ -323,6 +323,96 @@ and played with its cookie; the second play on a one-play link returned 403; all
 five test links were revoked and deleted. `go vet`, `go test ./...`, and the
 frontend build pass. Visual and phone-width checks remain a human pass.
 
+## Roadmap after v0.1.0
+
+v0.1.0 is the personal-use baseline and the Steps above are complete. The two
+open milestones hold the next work; turn an item into an issue when it starts.
+Keep each release small and only tag it after the scripted and visual checks
+pass.
+
+### 0.1.1 — operations and hardening
+
+**Database backup and restore**
+- Add `scripts/backup-db.sh`: `pg_dump` from `jfshare-db`, timestamped and
+  compressed, with a retention count.
+- Add `scripts/restore-db.sh` and a systemd timer/cron example.
+- Restore a dump into the dev database as the test, not just checking that the
+  file exists.
+- Done when a nightly dump runs unattended and a restore has been verified.
+
+**Pin the production image**
+- Change `docker-compose.yml` from `:latest` to the current release tag and
+  document the bump step.
+- Confirm the GHCR package visibility and that the host can pull it.
+- Done when the running container's image tag matches a release, not `latest`.
+
+**CI security and dependencies**
+- Add `govulncheck` and `npm audit` (fail on high/critical) to the GitHub
+  Actions build.
+- Pin action versions and document the update cadence.
+- Done when a vulnerable dependency or toolchain fails CI.
+
+**Deployment checklist**
+- Add a short section covering TLS, which ports may be exposed, proxy headers,
+  admin-key rotation, backups, retention, and upgrades.
+- Done when a fresh deployment can follow it without reading the source.
+
+**Startup warnings**
+- Warn, without printing secrets, when the admin key is short, the public URL
+  is HTTP in a non-dev setup, or required Jellyfin settings are missing.
+- Done when a misconfigured production start says what is wrong.
+
+**Fixes from real use**
+- Triage anything found while sharing links in the `bug` label, fix the ones
+  that affect playback or access first, and keep the rest for 0.2.0.
+
+### 0.2.0 — next features
+
+**Analytics UI**
+- Surface the existing `GET /api/admin/shares/{id}/analytics`: views, unique
+  viewers, average watch time, and views per day in the detail sheet.
+- Add a small dashboard summary from the same data; keep it dependency-free
+  unless a chart actually needs one.
+- Done when the admin can see how a share was used without calling the API.
+
+**Copy link plus password and QR code**
+- Let the admin copy one block with the URL, password, and expiry for sending
+  over chat.
+- Add a QR code for phone hand-off; ask before adding a client dependency.
+- Done when a new link can be handed over in one copy or one scan.
+
+**Full edit coverage**
+- Extend `PATCH /api/admin/shares/{id}` and `UpdateShare` with `allowDownload`,
+  `maxVideoHeight`, and `maxVideoBitrate`.
+- Add those fields to the edit dialog and keep the current reload/count
+  behavior.
+- Done when every create-form term except the shared item can be changed later.
+
+**Un-revoke and duplicate**
+- Add a restore endpoint that clears `revoked_at` only when the link is still
+  usable, and a duplicate endpoint that copies the terms with a new token.
+- Decide explicitly what restoring an expired link means; extending it may be
+  the more useful action.
+- Done when a mistaken revoke can be undone and terms can be reused.
+
+**Partial multi-select in the picker**
+- Add selection checkboxes to seasons and episodes, separate from the
+  single-item Share buttons.
+- Create one share per selected item with the same terms, then report per-item
+  success and failure.
+- Done when several episodes can be shared without sharing the whole season.
+
+**Better search**
+- Add fuzzy or alias matching, recently shared items, and remembering the last
+  chosen item between visits.
+- Check what Jellyfin's search already handles before adding client-side
+  ranking.
+- Done when finding a known title takes fewer keystrokes than today.
+
+**Backlog from use**
+- Revisit the items deliberately left out of v0.1.0 and promote whichever the
+  family workflow actually needs.
+
 ## Testing notes
 
 - Backend: `go test ./...`
