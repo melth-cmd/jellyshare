@@ -220,7 +220,7 @@ func (c *Client) SearchItems(ctx context.Context, query string, limit int) ([]Se
 
 	params := url.Values{}
 	params.Set("Recursive", "true")
-	params.Set("IncludeItemTypes", "Movie,Series,Season,Episode")
+	params.Set("IncludeItemTypes", "Movie,Series")
 	params.Set("Fields", "Overview,ProductionYear,RunTimeTicks,SeriesName,SeasonName,IndexNumber,ParentIndexNumber,ImageTags")
 	params.Set("ImageTypeLimit", "1")
 	params.Set("EnableImageTypes", "Primary")
@@ -252,8 +252,12 @@ func (c *Client) SearchItems(ctx context.Context, query string, limit int) ([]Se
 		return nil, fmt.Errorf("failed to decode search results: %w", err)
 	}
 
-	items := make([]SearchItem, 0, len(result.Items))
-	for _, item := range result.Items {
+	return searchItemsFrom(result.Items), nil
+}
+
+func searchItemsFrom(items []ItemInfo) []SearchItem {
+	rows := make([]SearchItem, 0, len(items))
+	for _, item := range items {
 		row := SearchItem{
 			ID:             item.ID,
 			Name:           item.Name,
@@ -272,9 +276,63 @@ func (c *Client) SearchItems(ctx context.Context, query string, limit int) ([]Se
 		case "Season":
 			row.SeasonNumber = item.IndexNumber
 		}
-		items = append(items, row)
+		rows = append(rows, row)
 	}
-	return items, nil
+	return rows
+}
+
+// BrowseSeasons returns a series' seasons in order, Specials included.
+func (c *Client) BrowseSeasons(ctx context.Context, seriesID string) ([]SearchItem, error) {
+	return c.browseChildren(ctx, seriesID, "Season", "IndexNumber", "Overview,ImageTags,IndexNumber", false)
+}
+
+// BrowseEpisodes returns one season's episodes in order.
+func (c *Client) BrowseEpisodes(ctx context.Context, seasonID string) ([]SearchItem, error) {
+	return c.browseChildren(ctx, seasonID, "Episode", "IndexNumber", "Overview,RunTimeTicks,ImageTags,IndexNumber,ParentIndexNumber", false)
+}
+
+// BrowseSeriesEpisodes returns every episode under a series, for the fallback
+// when Jellyfin has episodes but no Season objects.
+func (c *Client) BrowseSeriesEpisodes(ctx context.Context, seriesID string) ([]SearchItem, error) {
+	return c.browseChildren(ctx, seriesID, "Episode", "ParentIndexNumber,IndexNumber", "Overview,RunTimeTicks,ImageTags,IndexNumber,ParentIndexNumber", true)
+}
+
+func (c *Client) browseChildren(ctx context.Context, parentID, itemType, sortBy, fields string, recursive bool) ([]SearchItem, error) {
+	if c.userID == "" {
+		return nil, fmt.Errorf("user ID not set - call FetchAndSetUserID first")
+	}
+
+	params := url.Values{}
+	params.Set("ParentId", parentID)
+	if recursive {
+		params.Set("Recursive", "true")
+	}
+	params.Set("IncludeItemTypes", itemType)
+	params.Set("SortBy", sortBy)
+	params.Set("SortOrder", "Ascending")
+	params.Set("Fields", fields)
+	params.Set("ImageTypeLimit", "1")
+	params.Set("EnableImageTypes", "Primary")
+
+	path := fmt.Sprintf("/Users/%s/Items?%s", c.userID, params.Encode())
+	resp, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("jellyfin API returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	var result struct {
+		Items []ItemInfo `json:"Items"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode library items: %w", err)
+	}
+	return searchItemsFrom(result.Items), nil
 }
 
 func (c *Client) GetPlaybackInfo(ctx context.Context, itemID string) (*PlaybackInfo, error) {
