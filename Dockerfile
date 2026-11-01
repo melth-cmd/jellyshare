@@ -54,7 +54,7 @@ FROM alpine:3.20
 
 LABEL org.opencontainers.image.title="JFShare"
 LABEL org.opencontainers.image.description="Jellyfin one-time share link system"
-LABEL org.opencontainers.image.source="https://github.com/jellyfin-share/jellyfin-share-backend"
+LABEL org.opencontainers.image.source="https://github.com/melth-cmd/jellyfin-share-backend"
 
 # Install runtime dependencies
 RUN apk add --no-cache ca-certificates tzdata

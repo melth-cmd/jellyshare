@@ -1,4 +1,4 @@
-module github.com/jellyfin-share/jellyfin-share-backend
+module github.com/melth-cmd/jellyfin-share-backend
 
 go 1.23
 

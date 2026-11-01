@@ -1589,7 +1589,7 @@
 {#if !playerOpen}
   <footer class="foot">
     <p>
-      Shared via <a class="foot-link" href="https://github.com/stanislavhannes/jellyfin-share-backend" target="_blank" rel="noopener noreferrer">Jellyfin Share</a>
+      Shared via <a class="foot-link" href="https://github.com/melth-cmd/jellyfin-share-backend" target="_blank" rel="noopener noreferrer">Jellyfin Share</a>
     </p>
   </footer>
 {/if}

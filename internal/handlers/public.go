@@ -14,12 +14,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/jellyfin-share/jellyfin-share-backend/internal/config"
-	"github.com/jellyfin-share/jellyfin-share-backend/internal/database"
-	"github.com/jellyfin-share/jellyfin-share-backend/internal/download"
-	"github.com/jellyfin-share/jellyfin-share-backend/internal/jellyfin"
-	"github.com/jellyfin-share/jellyfin-share-backend/internal/middleware"
-	"github.com/jellyfin-share/jellyfin-share-backend/internal/models"
+	"github.com/melth-cmd/jellyfin-share-backend/internal/config"
+	"github.com/melth-cmd/jellyfin-share-backend/internal/database"
+	"github.com/melth-cmd/jellyfin-share-backend/internal/download"
+	"github.com/melth-cmd/jellyfin-share-backend/internal/jellyfin"
+	"github.com/melth-cmd/jellyfin-share-backend/internal/middleware"
+	"github.com/melth-cmd/jellyfin-share-backend/internal/models"
 )
 
 type PublicHandler struct {

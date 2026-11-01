@@ -22,9 +22,8 @@ them your Jellyfin server. The link carries its own terms: how long it lasts,
 how often it can be played, how many people may watch at once, and an optional
 password.
 
-This is a fork of [monxas/jellyfin-share-backend](https://github.com/monxas/jellyfin-share-backend)
-with Jellyfin 12 support, two security fixes, a reworked streaming path and a
-redesigned interface. See [What this fork changes](#what-this-fork-changes).
+This build includes Jellyfin 12 support, two security fixes, a reworked streaming
+path and a redesigned interface. See [Notable changes](#notable-changes).
 
 ## What it looks like
 
@@ -144,7 +143,7 @@ episode summaries in them under
 ### 1. Clone and Configure
 
 ```bash
-git clone https://github.com/stanislavhannes/jellyfin-share-backend.git
+git clone https://github.com/melth-cmd/jellyfin-share-backend.git
 cd jellyfin-share-backend
 
 # Copy example environment file
@@ -517,10 +516,10 @@ cd web && npm run build
 
 For seamless integration, install the [Jellyfin Share Plugin](https://github.com/stanislavhannes/jellyfin-share-plugin) to create share links directly from the Jellyfin UI.
 
-## What this fork changes
+## Notable changes
 
-Relative to the upstream project. Every item was reproduced against a live
-Jellyfin before being fixed; the numbers below are measured.
+Every item below was reproduced against a live Jellyfin before being fixed; the
+numbers are measured.
 
 **Security**
 

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jellyfin-share/jellyfin-share-backend/internal/jellyfin"
+	"github.com/melth-cmd/jellyfin-share-backend/internal/jellyfin"
 )
 
 // episodeListTTL is how long a share's episode list answers still requests
