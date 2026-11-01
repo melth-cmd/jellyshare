@@ -39,6 +39,7 @@
   // Copy has no visible effect, so the button says what happened, briefly.
   let copiedId = null;
   let copyTimer;
+  let copyError = '';
 
   // Selection is for mass actions only. It is cleared by anything that changes
   // which rows are on screen.
@@ -186,8 +187,17 @@
 
       const changed = (action === 'revoke' ? data.revoked : data.deleted) || [];
       const skipped = data.skipped || [];
-      const verb = action === 'revoke' ? 'revoked' : 'deleted';
-      massNotice = `${changed.length} ${verb}${skipped.length ? `, ${skipped.length} skipped` : ''}.`;
+      if (action === 'delete') {
+        massNotice = `${changed.length} deleted.${
+          skipped.length
+            ? ` ${skipped.length} left alone because ${skipped.length === 1 ? 'it is' : 'they are'} still active.`
+            : ''
+        }`;
+      } else {
+        massNotice = `${changed.length} revoked.${
+          skipped.length ? ` ${skipped.length} already revoked or no longer there.` : ''
+        }`;
+      }
       await loadShares();
     } catch (e) {
       massError = e.message || 'The action did not finish. Try again.';
@@ -363,7 +373,11 @@
 
   async function copyLink(share) {
     const url = `${window.location.origin}/s/${share.publicToken}`;
-    if (!(await copyText(url))) return;
+    if (!(await copyText(url))) {
+      copyError = 'Couldn’t copy the link. Your browser blocked the clipboard — select the address from the detail sheet instead.';
+      return;
+    }
+    copyError = '';
     clearTimeout(copyTimer);
     copiedId = share.id;
     copyTimer = setTimeout(() => (copiedId = null), 1600);
@@ -439,22 +453,28 @@
           type="checkbox"
           checked={shares.length > 0 && shares.every((share) => selectedIds.has(share.id))}
           on:change={toggleSelectAll}
-          disabled={loading || shares.length === 0}
+          disabled={loading || massBusy || shares.length === 0}
         />
         <span>Select all</span>
       </label>
 
       <span class="mass__count">{selectedIds.size} selected</span>
 
+      {#if selectedIds.size === 0}
+        <span class="mass__hint">Tick links to revoke or delete them together.</span>
+      {:else if hasMore}
+        <span class="mass__hint">Select all covers the {shares.length} loaded links.</span>
+      {/if}
+
       <div class="mass__actions">
         {#if massConfirm === 'revoke'}
           <button class="btn-danger" on:click={() => runMassAction('revoke')} disabled={massBusy}>
-            Revoke {selectedIds.size}
+            {massBusy ? 'Working' : `Revoke ${selectedIds.size}`}
           </button>
           <button class="btn-ghost" on:click={() => (massConfirm = null)} disabled={massBusy}>Cancel</button>
         {:else if massConfirm === 'delete'}
           <button class="btn-danger" on:click={() => runMassAction('delete')} disabled={massBusy}>
-            Delete {selectedIds.size}
+            {massBusy ? 'Working' : `Delete ${selectedIds.size}`}
           </button>
           <button class="btn-ghost" on:click={() => (massConfirm = null)} disabled={massBusy}>Cancel</button>
         {:else}
@@ -479,6 +499,7 @@
 
     {#if massNotice}<p class="banner banner--ok" role="status">{massNotice}</p>{/if}
     {#if massError}<p class="banner" role="alert">{massError}</p>{/if}
+    {#if copyError}<p class="banner" role="alert">{copyError}</p>{/if}
 
     {#if loading}
       <div class="state">
@@ -494,10 +515,17 @@
       <div class="state">
         {#if statusFilter === 'active'}
           <p class="state__head">No live links.</p>
-          <p>Create one from the Create tab and it will appear here.</p>
+          {#if counts.inactive > 0}
+            <p>
+              {counts.inactive} inactive {counts.inactive === 1 ? 'link is' : 'links are'}
+              under the Inactive filter. Create a new one from the Create tab.
+            </p>
+          {:else}
+            <p>Create one from the Create tab and it will appear here.</p>
+          {/if}
         {:else if statusFilter === 'inactive'}
           <p class="state__head">Nothing inactive.</p>
-          <p>Revoked, expired, and used-up links collect here.</p>
+          <p>Revoked, expired, and used-up links collect here when there are any.</p>
         {:else}
           <p class="state__head">No links yet.</p>
           <p>Create one from the Create tab and it will appear here.</p>
@@ -521,6 +549,7 @@
                 type="checkbox"
                 checked={selectedIds.has(share.id)}
                 on:click={(event) => toggleSelection(event, index, share.id)}
+                disabled={massBusy}
                 aria-label={`Select ${share.title}`}
               />
             </span>
@@ -916,7 +945,8 @@
     margin-inline-start: auto;
   }
 
-  .mass__warning {
+  .mass__warning,
+  .mass__hint {
     flex-basis: 100%;
     font-size: var(--text-sm);
     color: var(--color-muted);
@@ -1284,7 +1314,7 @@
     .labels,
     .row {
       display: grid;
-      grid-template-columns: 1.75rem minmax(0, 1fr) 7rem 8rem 7rem 13.5rem;
+      grid-template-columns: 1.75rem minmax(0, 1fr) 7rem 8rem 7rem 16rem;
       gap: var(--space-md);
       align-items: baseline;
     }
@@ -1318,6 +1348,10 @@
     .pill { gap: var(--space-xs); padding-left: var(--space-sm); }
     .pill__count, .pill__name { display: none; }
     .pill__wordmark { font-size: var(--text-base); }
+
+    .mass__actions { width: 100%; margin-inline-start: 0; }
+    .mass__actions .btn-ghost,
+    .mass__actions .btn-danger { flex: 1 1 auto; }
   }
 
   @media (max-width: 30rem) {

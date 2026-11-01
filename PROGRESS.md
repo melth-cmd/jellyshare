@@ -291,20 +291,37 @@ never-expiring link were untouched. Test rows removed afterwards.
 
 ### Step 8 — Copy and empty states
 
-- [ ] Update dashboard copy that still implies links are created from Jellyfin.
-- [ ] Empty states per tab and per filter.
-- [ ] Make sure errors and disabled states are understandable.
-- [ ] Selection bar and checkboxes work on phone widths.
+- [x] Update dashboard copy that still implies links are created from Jellyfin.
+- [x] Empty states per tab and per filter.
+- [x] Make sure errors and disabled states are understandable.
+- [x] Selection bar and checkboxes work on phone widths.
+
+Status: done. Empty states now explain whether there are no live links, no
+inactive links, or nothing at all, and point at the right tab. The mass-action
+bar says what Select all covers, explains why its actions are disabled, uses
+full-width buttons on phones, and reports skipped active links in words. Copy
+failures now say so instead of silently doing nothing.
 
 ### Step 9 — Docs and verification
 
-- [ ] Update `SPEC.md` to match what was built.
-- [ ] Update `README.md` admin section with the new flow and dev workflow.
-- [ ] Run `go build ./...`, `go test ./...`, and `cd web && npm run build`.
-- [ ] Manual checklist: create movie share, create series share, password link,
-      expiry, play limit, revoke one, edit one, mass revoke, mass delete,
-      filter switching, retention cleanup, mobile layout.
-- [ ] Commit and push to `origin main`.
+- [x] Update `SPEC.md` to match what was built.
+- [x] Update `README.md` admin section with the new flow and dev workflow.
+- [x] Run `go build ./...`, `go test ./...`, and `cd web && npm run build`.
+- [x] Scripted checklist: create movie, series, season, and episode shares;
+      password unlock; play limit; revoke, edit, mass revoke, mass delete;
+      filter counts; retention cleanup.
+- [ ] Visual and phone-width pass in the browser.
+- [x] Commit and push to `origin main`.
+
+Status: done. SPEC.md is now an implemented spec. README covers the Create and
+Shares tabs, optional owner, status filtering and counts, bulk endpoints, library
+browse endpoints, retention, and the dev loop on 8098 with `make dev-db-sync`.
+
+Scripted verification against the dev stack: movie, series, season, and episode
+shares created and resolved through the public API; a password share unlocked
+and played with its cookie; the second play on a one-play link returned 403; all
+five test links were revoked and deleted. `go vet`, `go test ./...`, and the
+frontend build pass. Visual and phone-width checks remain a human pass.
 
 ## Testing notes
 
@@ -359,3 +376,6 @@ never-expiring link were untouched. Test rows removed afterwards.
 - Step 7 done: configurable retention (365 days by default, `0` disables),
   `DeleteStaleShares` in the cleanup loop, and docs. Verified against stale
   expired, stale revoked, fresh, and never-expiring rows.
+- Steps 8 and 9 done: empty/error/disclosure copy polished, docs rewritten to
+  match the built admin flow, and a scripted end-to-end pass covered movie,
+  series, season, episode, password, play-limit, bulk, and cleanup paths.

@@ -72,6 +72,7 @@
   let created = null;
   let copied = false;
   let copyTimer;
+  let copyError = '';
 
   onMount(() => {
     runSearch('');
@@ -327,7 +328,11 @@
 
   async function copyCreated() {
     const ok = await copyText(created.publicUrl);
-    if (!ok) return;
+    if (!ok) {
+      copyError = 'Couldn’t copy the link. Select the address and copy it yourself.';
+      return;
+    }
+    copyError = '';
     copied = true;
     clearTimeout(copyTimer);
     copyTimer = setTimeout(() => (copied = false), 1600);
@@ -336,6 +341,7 @@
   function createAnother() {
     created = null;
     copied = false;
+    copyError = '';
     selectedItem = null;
     searchQuery = '';
     results = [];
@@ -371,6 +377,7 @@
           {copied ? 'Copied' : 'Copy link'}
         </button>
       </div>
+      {#if copyError}<p class="copy-error" role="alert">{copyError}</p>{/if}
 
       <p class="success__meta">
         {#if created.expiresAt}Expires {formatDate(created.expiresAt)}{:else}Never expires{/if}
@@ -429,6 +436,7 @@
             {:else if results.length === 0}
               <p class="pick-state">
                 No matches{#if searchQuery.trim()} for “{searchQuery.trim()}”{/if}.
+                Try a film or series title.
               </p>
             {:else}
               <ul class="pick">
@@ -1033,6 +1041,11 @@
     font-family: var(--font-outlier);
     font-size: var(--text-sm);
     overflow-wrap: anywhere;
+  }
+
+  .copy-error {
+    font-size: var(--text-sm);
+    color: var(--color-danger);
   }
 
   .success__meta {
