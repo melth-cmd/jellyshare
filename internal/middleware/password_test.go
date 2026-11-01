@@ -33,7 +33,7 @@ func TestSessionCookieSecureFollowsRequest(t *testing.T) {
 				req.TLS = &tls.ConnectionState{}
 			}
 			rec := httptest.NewRecorder()
-			manager.SetSessionCookie(rec, req, "share-token")
+			manager.SetSessionCookie(rec, req, "share-token", "$2a$10$hash")
 
 			cookies := rec.Result().Cookies()
 			if len(cookies) != 1 {
@@ -46,5 +46,26 @@ func TestSessionCookieSecureFollowsRequest(t *testing.T) {
 				t.Error("cookie must stay HttpOnly")
 			}
 		})
+	}
+}
+
+func TestSessionCookieIsBoundToTheCurrentPassword(t *testing.T) {
+	manager := NewShareSessionManager("secret")
+	req := httptest.NewRequest("GET", "http://example.test/", nil)
+	rec := httptest.NewRecorder()
+	manager.SetSessionCookie(rec, req, "share-token", "old-hash")
+
+	unlock := rec.Result().Cookies()[0]
+	withCookie := httptest.NewRequest("GET", "http://example.test/", nil)
+	withCookie.AddCookie(unlock)
+
+	if !manager.GetSessionFromCookie(withCookie, "share-token", "old-hash") {
+		t.Error("cookie should unlock the share it was issued for")
+	}
+	if manager.GetSessionFromCookie(withCookie, "share-token", "new-hash") {
+		t.Error("changing the password must invalidate the old unlock cookie")
+	}
+	if manager.GetSessionFromCookie(withCookie, "other-share", "old-hash") {
+		t.Error("cookie must not unlock another share")
 	}
 }

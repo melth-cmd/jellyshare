@@ -589,6 +589,18 @@ cd web && npm run build
 - **IP hashing** - Client IPs are hashed for privacy in audit logs
 - **Automatic session cleanup** - Stale sessions are automatically terminated; links
   are deleted after `JFSHARE_SHARE_RETENTION_DAYS` days once expired or revoked
+- **Password changes invalidate unlocks** - An unlock cookie is bound to the
+  password hash it was issued for, so changing the password asks every viewer
+  again instead of leaving old cookies valid
+- **Proxy-aware rate limiting** - Forwarded client addresses are trusted only
+  from a loopback or private reverse proxy, and only the rightmost
+  `X-Forwarded-For` value; a direct client cannot pick its own rate-limit bucket
+- **HTTPS-ready cookies and HSTS** - Session cookies are `Secure` on HTTPS (and
+  still work on a plain-HTTP LAN), and HSTS is sent only when the request
+  arrived over HTTPS. Put the public deployment behind HTTPS
+- **No-store admin and private logs** - Admin responses are not cached, share
+  tokens, session ids and download tickets are masked in request logs, and all
+  responses carry `nosniff`, `SAMEORIGIN`, `no-referrer`, and `noindex` headers
 - **Credentials stay server-side** - The Jellyfin key travels as a request header, never
   in a URL that could be echoed back into a manifest the viewer receives
 - **Downloads are ticketed** - The item a download serves is checked against the share

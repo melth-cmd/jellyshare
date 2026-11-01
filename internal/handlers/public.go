@@ -82,7 +82,7 @@ func (h *PublicHandler) GetShareInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	// A password link shows what it points at and its terms, and nothing else,
 	// until this browser has entered the password.
-	if share.RequiresPassword() && !h.sessions.GetSessionFromCookie(r, token) {
+	if share.RequiresPassword() && !h.sessions.GetSessionFromCookie(r, token, share.PasswordHash.String) {
 		info.WithholdDetails()
 		writeJSON(w, http.StatusOK, info)
 		return
@@ -590,7 +590,7 @@ func (h *PublicHandler) ValidatePassword(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Set session cookie
-	h.sessions.SetSessionCookie(w, r, token)
+	h.sessions.SetSessionCookie(w, r, token, share.PasswordHash.String)
 
 	h.db.LogAuditEvent(r.Context(), database.AuditEventPasswordAttempt, &share.ID, nil, nil, &ipHash, map[string]interface{}{
 		"success": true,
@@ -616,7 +616,7 @@ func (h *PublicHandler) publicShare(w http.ResponseWriter, r *http.Request) (*mo
 		return nil, false
 	}
 
-	if share.RequiresPassword() && !h.sessions.GetSessionFromCookie(r, token) {
+	if share.RequiresPassword() && !h.sessions.GetSessionFromCookie(r, token, share.PasswordHash.String) {
 		writeError(w, http.StatusUnauthorized, "password required")
 		return nil, false
 	}

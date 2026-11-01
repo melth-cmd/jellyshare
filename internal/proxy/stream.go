@@ -368,7 +368,7 @@ func (p *StreamProxy) ServeImage(w http.ResponseWriter, r *http.Request) {
 	imageType := chi.URLParam(r, "type")
 
 	share, err := p.db.GetShareByToken(r.Context(), token)
-	if err != nil || share == nil {
+	if err != nil || share == nil || share.Gone() != nil {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
@@ -400,7 +400,7 @@ func (p *StreamProxy) ServeEpisodeImage(w http.ResponseWriter, r *http.Request) 
 
 	share, err := p.db.GetShareByToken(r.Context(), token)
 	if err != nil || share == nil || !share.HasEpisodes() || share.Gone() != nil ||
-		(share.RequiresPassword() && !p.sessions.GetSessionFromCookie(r, token)) {
+		(share.RequiresPassword() && !p.sessions.GetSessionFromCookie(r, token, share.PasswordHash.String)) {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}

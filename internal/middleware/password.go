@@ -61,10 +61,18 @@ func NewShareSessionManager(secretKey string) *ShareSessionManager {
 	}
 }
 
-// CreateSessionToken creates a signed session token for a share
-func (m *ShareSessionManager) CreateSessionToken(shareToken string) string {
+// passwordFingerprint binds an unlock cookie to the password it was issued for.
+// It is a hash of the stored bcrypt hash, not the password, and changing or
+// removing the password invalidates every cookie handed out before the change.
+func passwordFingerprint(passwordHash string) string {
+	sum := sha256.Sum256([]byte(passwordHash))
+	return hex.EncodeToString(sum[:8])
+}
+
+// CreateSessionToken creates a signed session token for a share and password.
+func (m *ShareSessionManager) CreateSessionToken(shareToken, passwordHash string) string {
 	expiry := time.Now().Add(cookieMaxAge).Unix()
-	data := fmt.Sprintf("%s:%d", shareToken, expiry)
+	data := fmt.Sprintf("%s:%d:%s", shareToken, expiry, passwordFingerprint(passwordHash))
 
 	mac := hmac.New(sha256.New, m.secretKey)
 	mac.Write([]byte(data))
@@ -73,48 +81,50 @@ func (m *ShareSessionManager) CreateSessionToken(shareToken string) string {
 	return base64.URLEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", data, signature)))
 }
 
-// ValidateSessionToken validates a session token and returns the share token if valid
-func (m *ShareSessionManager) ValidateSessionToken(token string) (string, bool) {
+// ValidateSessionToken validates a session token and returns the share token and
+// password fingerprint it was issued for.
+func (m *ShareSessionManager) ValidateSessionToken(token string) (string, string, bool) {
 	decoded, err := base64.URLEncoding.DecodeString(token)
 	if err != nil {
-		return "", false
+		return "", "", false
 	}
 
 	parts := strings.Split(string(decoded), ":")
-	if len(parts) != 3 {
-		return "", false
+	if len(parts) != 4 {
+		return "", "", false
 	}
 
 	shareToken := parts[0]
 	expiryStr := parts[1]
-	providedSig := parts[2]
+	fingerprint := parts[2]
+	providedSig := parts[3]
 
 	// Verify signature
-	data := fmt.Sprintf("%s:%s", shareToken, expiryStr)
+	data := fmt.Sprintf("%s:%s:%s", shareToken, expiryStr, fingerprint)
 	mac := hmac.New(sha256.New, m.secretKey)
 	mac.Write([]byte(data))
 	expectedSig := hex.EncodeToString(mac.Sum(nil))
 
 	if !hmac.Equal([]byte(providedSig), []byte(expectedSig)) {
-		return "", false
+		return "", "", false
 	}
 
 	// Check expiry
 	var expiry int64
 	fmt.Sscanf(expiryStr, "%d", &expiry)
 	if time.Now().Unix() > expiry {
-		return "", false
+		return "", "", false
 	}
 
-	return shareToken, true
+	return shareToken, fingerprint, true
 }
 
 // SetSessionCookie sets the session cookie for a password-protected share.
 // Secure is set only when the viewer reached the backend over HTTPS; a Secure
 // cookie is silently dropped on plain HTTP, which otherwise puts the password
 // gate in an endless loop on a LAN or dev deployment.
-func (m *ShareSessionManager) SetSessionCookie(w http.ResponseWriter, r *http.Request, shareToken string) {
-	token := m.CreateSessionToken(shareToken)
+func (m *ShareSessionManager) SetSessionCookie(w http.ResponseWriter, r *http.Request, shareToken, passwordHash string) {
+	token := m.CreateSessionToken(shareToken, passwordHash)
 	http.SetCookie(w, &http.Cookie{
 		Name:     ShareSessionCookieName,
 		Value:    token,
@@ -137,17 +147,18 @@ func requestIsHTTPS(r *http.Request) bool {
 	return strings.EqualFold(strings.TrimSpace(forwarded), "https")
 }
 
-// GetSessionFromCookie extracts and validates the session from the cookie
-func (m *ShareSessionManager) GetSessionFromCookie(r *http.Request, shareToken string) bool {
+// GetSessionFromCookie reports whether this browser unlocked this share with the
+// password it currently has.
+func (m *ShareSessionManager) GetSessionFromCookie(r *http.Request, shareToken, passwordHash string) bool {
 	cookie, err := r.Cookie(ShareSessionCookieName)
 	if err != nil {
 		return false
 	}
 
-	tokenShareToken, valid := m.ValidateSessionToken(cookie.Value)
+	tokenShareToken, fingerprint, valid := m.ValidateSessionToken(cookie.Value)
 	if !valid {
 		return false
 	}
 
-	return tokenShareToken == shareToken
+	return tokenShareToken == shareToken && fingerprint == passwordFingerprint(passwordHash)
 }
