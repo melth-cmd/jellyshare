@@ -271,17 +271,23 @@ and reports skipped active ids. Verified live with three temporary shares:
 Expiry already makes a link dead; there is no need to also mark it revoked. The
 useful cleanup is deleting the row after it has been dead long enough.
 
-- [ ] Add `JFSHARE_SHARE_RETENTION_DAYS`, default 365.
-- [ ] Replace the unused `CleanupExpiredShares` with
+- [x] Add `JFSHARE_SHARE_RETENTION_DAYS`, default 365.
+- [x] Replace the unused `CleanupExpiredShares` with
       `DeleteStaleShares(ctx, retention)`: delete where `expires_at` or
       `revoked_at` is older than the cutoff. Never-expiring, non-revoked links
       are never touched.
-- [ ] Run it from the existing five-minute cleanup loop and log how many rows
+- [x] Run it from the existing five-minute cleanup loop and log how many rows
       went.
-- [ ] Document the setting in `.env.example` and the README.
+- [x] Document the setting in `.env.example` and the README.
 
 Done when: an old expired or revoked link disappears after the retention
 window, while live and never-expiring links stay.
+
+Status: done. `JFSHARE_SHARE_RETENTION_DAYS` defaults to 365 and `0` disables
+cleanup. `DeleteStaleShares` replaces the unused `CleanupExpiredShares` and runs
+from the existing five-minute loop. Verified in the dev database: a link expired
+730 days ago and one revoked 730 days ago were deleted; a fresh link and a
+never-expiring link were untouched. Test rows removed afterwards.
 
 ### Step 8 — Copy and empty states
 
@@ -350,3 +356,6 @@ window, while live and never-expiring links stay.
   delete endpoints/UI, per-row Edit/Revoke/Copy, and an edit dialog. Bulk
   endpoints tested live with mixed active/inactive ids. Added handler tests for
   bulk id validation.
+- Step 7 done: configurable retention (365 days by default, `0` disables),
+  `DeleteStaleShares` in the cleanup loop, and docs. Verified against stale
+  expired, stale revoked, fresh, and never-expiring rows.

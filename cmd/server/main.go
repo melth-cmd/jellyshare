@@ -222,5 +222,15 @@ func startCleanupTask(db *database.DB, cfg *config.Config) {
 		} else if deleted > 0 {
 			log.Printf("Cleaned up %d old sessions", deleted)
 		}
+
+		// Remove links that have been dead long enough that nobody needs the row.
+		if cfg.ShareRetentionDays > 0 {
+			stale, err := db.DeleteStaleShares(ctx, time.Duration(cfg.ShareRetentionDays)*24*time.Hour)
+			if err != nil {
+				log.Printf("Failed to delete stale shares: %v", err)
+			} else if stale > 0 {
+				log.Printf("Deleted %d stale shares", stale)
+			}
+		}
 	}
 }
