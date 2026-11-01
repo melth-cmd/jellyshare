@@ -235,6 +235,26 @@ partial failure is reported honestly. There is no bulk edit.
       detail sheet too.
 - [ ] Confirm before mass revoke and mass delete.
 
+Implementation notes:
+
+- Select-all in the mass-action bar applies to the rows currently loaded, not
+  every page in the filter. The bar says so when more pages exist.
+- Shift-click uses the last plain-clicked row as the anchor and applies the new
+  checked state to the whole range.
+- Mass revoke returns `{ revoked: [...], skipped: [...] }`; revoked rows also
+  have their active sessions terminated, like the single-share action.
+- Mass delete returns `{ deleted: [...], skipped: [...] }`; active rows are
+  skipped server-side, not just hidden in the UI.
+- Bulk ids are deduplicated, capped at 200 per request, and validated as UUIDs.
+- The edit dialog uses the existing `PATCH /api/admin/shares/{id}`. Leaving a
+  field blank means "leave it alone". Extending a never-expiring link is
+  disabled with a note, because Jellyfin's SQL keeps its NULL expiry.
+- Editing reloads the current filter so counts and statuses stay truthful;
+  selection clears.
+- The edit dialog is also reachable from the detail sheet. Fields: add days to
+  expiry, play limit, concurrent viewers, set password, remove password.
+  Quality and download changes are not part of this step.
+
 Done when: ticking a few shares and choosing Revoke or Delete does what the
 label says, shift-click selects the range, and each row can be edited or revoked
 on its own.
