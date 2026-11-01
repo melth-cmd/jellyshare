@@ -132,19 +132,27 @@ created → Active 1, revoked → Active 0, then deleted the test row.
 
 ### Step 4 — Create share form
 
-- [ ] Item picker: debounced search, poster and title rows, select one item.
-- [ ] Show the selected item with its poster, title, type, year, and runtime.
-- [ ] Expiry: preset chips (24 h, 7 d, 30 d, Never) plus a custom option.
-- [ ] Play limit and concurrent viewer fields, optional.
-- [ ] Quality cap: Auto and common heights; optional bitrate cap.
-- [ ] Password field, optional.
-- [ ] Downloads toggle, default on.
-- [ ] Inline validation; keep form state on server errors.
-- [ ] Submit to `POST /api/admin/shares`; on success show the public URL with a
+- [x] Item picker: debounced search, poster and title rows, select one item.
+- [x] Show the selected item with its poster, title, type, year, and runtime.
+- [x] Expiry: preset chips (24 h, 7 d, 30 d, Never) plus a custom option.
+- [x] Play limit and concurrent viewer fields, optional.
+- [x] Quality cap: Auto and common heights; optional bitrate cap.
+- [x] Password field, optional.
+- [x] Downloads toggle, default on.
+- [x] Inline validation; keep form state on server errors.
+- [x] Submit to `POST /api/admin/shares`; on success show the public URL with a
       copy button, and offer "Create another".
 
 Done when: a share created from the admin page opens and plays through the
 existing public share page.
+
+Status: done. The form searches the live library, shows posters through the
+admin image proxy, and exposes expiry, play and viewer limits, quality caps,
+password, and downloads. The backend now fills the Jellyfin user automatically
+when the request leaves it out. Success shows the public URL with a copy button,
+Create another, and View in Shares. Verified by creating a share through the API
+without a user id, checking its settings in the Active list, and deleting the
+test rows.
 
 ### Step 5 — Selection, mass actions, and per-share actions
 
@@ -241,3 +249,7 @@ window, while live and never-expiring links stay.
 - Step 3 done: server-side Active/Inactive/All filter with counts, filter buttons
   in the Shares tab, and revoked rows leave the Active view in place. Added bulk
   actions and retention cleanup to the plan as Steps 5 and 6.
+- Step 4 done: create form with library picker, posters, terms, quality, password,
+  downloads, success/copy state, and automatic Jellyfin user assignment. Shared
+  clipboard helper works over plain HTTP on the LAN. Frontend build and API
+  creation checks pass.

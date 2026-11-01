@@ -356,6 +356,11 @@ func (c *Client) BaseURL() string {
 	return c.baseURL
 }
 
+// UserID is the Jellyfin user the backend acts as, resolved at startup.
+func (c *Client) UserID() string {
+	return c.userID
+}
+
 // TicksToSeconds converts Jellyfin runtime ticks to seconds
 func TicksToSeconds(ticks int64) int64 {
 	return ticks / 10000000
