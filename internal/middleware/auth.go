@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
+	"net"
 	"net/http"
 	"strings"
 )
@@ -26,21 +27,38 @@ func AdminAuth(apiKey string) func(http.Handler) http.Handler {
 				providedKey = strings.TrimPrefix(providedKey, "Bearer ")
 			}
 
-			if subtle.ConstantTimeCompare([]byte(providedKey), []byte(apiKey)) != 1 {
+			// Compare fixed-size digests so the comparison leaks neither the key's
+			// contents nor its length.
+			providedDigest := sha256.Sum256([]byte(providedKey))
+			expectedDigest := sha256.Sum256([]byte(apiKey))
+			if subtle.ConstantTimeCompare(providedDigest[:], expectedDigest[:]) != 1 {
 				http.Error(w, `{"error": "unauthorized"}`, http.StatusUnauthorized)
 				return
 			}
 
+			// Admin responses carry link terms and session details; never let a
+			// browser or intermediary keep a copy.
+			w.Header().Set("Cache-Control", "no-store")
 			next.ServeHTTP(w, r)
 		})
 	}
 }
 
-// ClientIPMiddleware extracts and hashes the client IP
+// ClientIPMiddleware resolves the client address and rewrites RemoteAddr so
+// rate limiting, audit logs and the IP context all use the same value.
+//
+// Forwarding headers are only trusted when the request arrived from a private or
+// loopback address - the reverse proxy on the same host or Docker network. A
+// client connecting from the internet cannot choose its own rate-limit bucket
+// by sending X-Forwarded-For.
 func ClientIPMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		clientIP := extractClientIP(r)
 		ipHash := hashIP(clientIP)
+
+		if ip := net.ParseIP(clientIP); ip != nil {
+			r.RemoteAddr = net.JoinHostPort(ip.String(), "0")
+		}
 
 		ctx := context.WithValue(r.Context(), ContextKeyClientIP, clientIP)
 		ctx = context.WithValue(ctx, ContextKeyIPHash, ipHash)
@@ -50,24 +68,41 @@ func ClientIPMiddleware(next http.Handler) http.Handler {
 }
 
 func extractClientIP(r *http.Request) string {
-	// Check common headers for real IP behind proxies
-	if cfIP := r.Header.Get("CF-Connecting-IP"); cfIP != "" {
-		return cfIP
+	remote := remoteIP(r.RemoteAddr)
+	ip := net.ParseIP(remote)
+	if ip == nil {
+		return remote
 	}
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		parts := strings.Split(xff, ",")
-		return strings.TrimSpace(parts[0])
-	}
-	if xrip := r.Header.Get("X-Real-IP"); xrip != "" {
-		return xrip
+	if !ip.IsLoopback() && !ip.IsPrivate() {
+		// Direct internet client: forwarding headers are untrusted claims.
+		return ip.String()
 	}
 
-	// Fallback to remote address
-	ip := r.RemoteAddr
-	if colonIdx := strings.LastIndex(ip, ":"); colonIdx != -1 {
-		ip = ip[:colonIdx]
+	// Trust only the value the nearest proxy appended. A proxy such as Caddy
+	// appends the address it saw to any X-Forwarded-For the client sent, so the
+	// rightmost entry is the one the proxy itself vouches for; earlier entries
+	// may be attacker-supplied. CF-Connecting-IP and X-Real-IP are not used
+	// because a proxy may pass a client's own copy through unchanged.
+	forwarded := r.Header.Get("X-Forwarded-For")
+	if forwarded == "" {
+		return ip.String()
 	}
-	return strings.Trim(ip, "[]")
+	parts := strings.Split(forwarded, ",")
+	for i := len(parts) - 1; i >= 0; i -= 1 {
+		candidate := strings.TrimSpace(parts[i])
+		if parsed := net.ParseIP(candidate); parsed != nil {
+			return parsed.String()
+		}
+	}
+	return ip.String()
+}
+
+func remoteIP(addr string) string {
+	host, _, err := net.SplitHostPort(addr)
+	if err == nil {
+		addr = host
+	}
+	return strings.Trim(addr, "[]")
 }
 
 func hashIP(ip string) string {

@@ -72,16 +72,16 @@ func main() {
 	r := chi.NewRouter()
 
 	// Global middleware
-	r.Use(middleware.Logger) // chi's logger, with download tickets masked
+	r.Use(middleware.Logger) // chi's logger, with bearer tokens masked
 	r.Use(chimiddleware.Recoverer)
-	r.Use(chimiddleware.RealIP)
+	r.Use(middleware.SecurityHeaders)
+	r.Use(middleware.BodyLimit(64 << 10))
 	r.Use(middleware.ClientIPMiddleware)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Backend-Key"},
-		AllowCredentials: true,
-		MaxAge:           300,
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-Backend-Key"},
+		MaxAge:         300,
 	}))
 
 	// Health check
@@ -119,7 +119,10 @@ func main() {
 			r.Use(httprate.LimitByIP(cfg.RateLimitRequests, cfg.RateLimitWindow))
 
 			r.Get("/shares/{token}", publicHandler.GetShareInfo)
-			r.Post("/shares/{token}/password", publicHandler.ValidatePassword)
+			// Password guesses get a tighter budget than ordinary page calls:
+			// bcrypt is deliberately slow, and this is the one endpoint where a
+			// wrong guess is useful to an attacker.
+			r.With(httprate.LimitByIP(10, time.Minute)).Post("/shares/{token}/password", publicHandler.ValidatePassword)
 			r.Post("/shares/{token}/play", publicHandler.StartPlayback)
 			r.Get("/shares/{token}/episodes", publicHandler.GetShareEpisodes)
 			r.Get("/shares/{token}/progress", publicHandler.GetShareProgress)
@@ -172,11 +175,12 @@ func main() {
 
 	// Create server
 	server := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Port),
-		Handler:      r,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 0, // No timeout for streaming
-		IdleTimeout:  120 * time.Second,
+		Addr:              fmt.Sprintf(":%d", cfg.Port),
+		Handler:           r,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      0, // No timeout for streaming
+		IdleTimeout:       120 * time.Second,
 	}
 
 	// Graceful shutdown

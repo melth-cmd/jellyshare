@@ -379,3 +379,11 @@ frontend build pass. Visual and phone-width checks remain a human pass.
 - Steps 8 and 9 done: empty/error/disclosure copy polished, docs rewritten to
   match the built admin flow, and a scripted end-to-end pass covered movie,
   series, season, episode, password, play-limit, bulk, and cleanup paths.
+- Security pass: forwarded IPs now require a private proxy and use the rightmost
+  X-Forwarded-For; admin digests compare in constant time; CORS no longer claims
+  credentials; request bodies are capped; password guesses get a 10/min limit;
+  unlock cookies are bound to the current password hash; dead-link images are
+  refused; admin responses are no-store; public bearer tokens are masked in
+  logs; security headers and HTTPS-only HSTS were added; read-header timeout
+  set. Live checks: headers, password rotation invalidating the old cookie,
+  mask in logs, and 404 for a dead share's poster. `.env` tightened to 0600.
