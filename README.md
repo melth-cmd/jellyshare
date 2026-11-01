@@ -87,8 +87,9 @@ episode summaries in them under
   revoked or expired, and since when
 - **Secure Streaming** - Media is proxied through the backend; Jellyfin is never exposed
 - **Rich Metadata** - Displays poster, backdrop, ratings, cast, and more
-- **Admin Dashboard** - Web UI to manage and monitor all shares, paging through
-  every link with counts kept on the server
+- **Admin Dashboard** - Create links, browse the Jellyfin library as a series →
+  season → episode tree, filter shares, edit terms, and revoke or delete links
+  one at a time or in bulk
 - **Session Tracking** - Monitor active viewers and playback sessions
 - **HLS Streaming** - Segments are served through the backend, never from Jellyfin
 - **Browser-Compatible Playback** - The codec is negotiated with the viewer's browser,
@@ -181,6 +182,18 @@ The server will be available at `http://localhost:8097`
 
 Navigate to `http://localhost:8097/admin` and enter your `BACKEND_API_KEY`.
 
+The dashboard has two tabs:
+
+- **Create** — search for a film or series, expand a series to its seasons and
+  episodes, choose what to share, then set expiry, play and viewer limits,
+  quality caps, a password, and whether downloads are allowed.
+- **Shares** — filter by Active, Inactive, or All; select rows with checkboxes
+  (shift-click for a range) to revoke or delete in bulk; edit or revoke any
+  individual link from its row or detail sheet.
+
+Links are owned by the first Jellyfin user the backend finds at startup. The
+create API accepts an explicit `jellyfinUserId` when another owner is needed.
+
 ## Configuration
 
 | Environment Variable | Description | Default |
@@ -228,7 +241,9 @@ X-Backend-Key: your-api-key
 
 `expiresInMinutes` defaults to 30 days when omitted. `allowDownload` defaults to
 `true` when omitted, so a client that predates it keeps offering downloads;
-`JFSHARE_ALLOW_DOWNLOADS=false` overrides it for every share.
+`JFSHARE_ALLOW_DOWNLOADS=false` overrides it for every share. `jellyfinUserId` is
+optional: when omitted the backend uses the Jellyfin user it resolved at
+startup, which is what the admin page does.
 
 #### List Shares
 ```http
@@ -240,9 +255,25 @@ X-Backend-Key: your-api-key
 Newest first, a page at a time: `limit` defaults to 50 and is capped at 200. The
 next page continues below the last link of the previous one - pass its
 `createdAt` and `id` as `beforeCreatedAt` and `beforeId` - so links created or
-cleaned up in between do not shift the pages. The response carries the page in
-`shares`, `hasMore` when another page follows, and `total` (every link) and `live`
-(not revoked, not expired) counted over all links, not just the page. With
+cleaned up in between do not shift the pages. Add `status=active|inactive|all`
+(default `all`) to filter. Active means not revoked, not expired, and plays
+remaining; inactive is everything else.
+
+The response carries the page in `shares`, `hasMore` when another page follows,
+`status` echoing the filter, and counts over all links rather than the page:
+
+```json
+{
+  "shares": [],
+  "total": 12,
+  "live": 8,
+  "status": "active",
+  "counts": { "active": 8, "inactive": 4, "all": 12 },
+  "hasMore": false
+}
+```
+
+`total` is the number matching the filter; `live` is the active count. With
 `?jellyfinUserId=…` it returns that user's links whole.
 
 #### Get Share Details
@@ -262,6 +293,25 @@ if it belongs to that user, otherwise the call is refused with 403. Use this to 
 one Jellyfin user from revoking another user's share. Omitting it keeps full admin
 reach. The same applies to `GET /api/admin/shares/{id}/analytics`.
 
+#### Revoke or Delete Shares in Bulk
+```http
+POST /api/admin/shares/bulk/revoke
+POST /api/admin/shares/bulk/delete
+Content-Type: application/json
+X-Backend-Key: your-api-key
+
+{ "ids": ["baf9de87-…", "6d019bd4-…"] }
+```
+
+Up to 200 unique ids per request. Revoke terminates any active sessions. Delete
+only removes links that are already inactive; ids that are still active are
+returned in `skipped` and left untouched.
+
+```json
+{ "revoked": ["baf9de87-…"], "skipped": [] }
+{ "deleted": ["baf9de87-…"], "skipped": ["6d019bd4-…"] }
+```
+
 #### Update Share
 ```http
 PATCH /api/admin/shares/{id}
@@ -270,9 +320,15 @@ X-Backend-Key: your-api-key
 
 {
   "maxTotalPlays": 10,
-  "extendMinutes": 1440
+  "maxConcurrentViewers": 2,
+  "extendMinutes": 1440,
+  "password": "new-password",
+  "removePassword": false
 }
 ```
+
+All fields are optional; omitted fields stay as they are. `extendMinutes` adds to
+the existing expiry and does nothing to a link that never expires.
 
 #### Share Analytics
 ```http
@@ -288,6 +344,23 @@ last 30 days.
 GET /api/admin/stats
 X-Backend-Key: your-api-key
 ```
+
+#### Library Search and Browse
+
+```http
+GET /api/admin/jellyfin/items?q=alien&limit=20
+GET /api/admin/jellyfin/items/{id}/poster?maxWidth=240
+GET /api/admin/jellyfin/series/{id}/seasons
+GET /api/admin/jellyfin/seasons/{id}/episodes
+GET /api/admin/jellyfin/series/{id}/episodes
+X-Backend-Key: your-api-key
+```
+
+`items` searches films and series (recently added when `q` is empty). The series
+and season calls feed the create page's collapsible tree; the series-level
+episodes call is the fallback for libraries without Season objects. Posters are
+proxied with the Jellyfin key kept server-side, so the browser only sends the
+admin key.
 
 ### Public Endpoints
 
@@ -413,12 +486,24 @@ Content-Type: application/json
 ### Setup
 
 ```bash
-# Start development environment with hot reload
-docker-compose -f docker-compose.dev.yml up
+# Start the hot-reload dev stack
+make dev-up
 
-# Backend runs on http://localhost:8097
-# Vite dev server runs on http://localhost:5173
+# Backend:  http://<host-ip>:8098  (port 8097 is left for production)
+# Frontend: http://<host-ip>:5173
 ```
+
+The dev stack reads `JELLYFIN_URL` and `JELLYFIN_API_KEY` from `.env`, so it talks
+to the real Jellyfin library. Go changes rebuild through `air`; Svelte changes
+update through Vite. Production can keep running on 8097 at the same time.
+
+```bash
+# Optional: replace dev data with a dump of the production database
+make dev-db-sync
+```
+
+The dev backend binds to the LAN address so another machine can open the UI; set
+`DEV_HOST_IP` and `DEV_PUBLIC_BASE_URL` to override the defaults.
 
 ### Local demo
 

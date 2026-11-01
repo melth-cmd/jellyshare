@@ -1,69 +1,63 @@
-# Spec: Create shares from the admin page
+# Spec: Create and manage shares from the admin page
 
-Status: draft
+Status: implemented
 Last updated: 2026-11-01
 
 ## Goal
 
-Let the admin create share links directly from `/admin`, without the Jellyfin
-companion plugin. This is a personal-use replacement for the plugin's create
-flow.
+Let the admin create and manage share links directly from `/admin`, for personal
+use, without a separate Jellyfin-side integration.
 
 ## Non-goals
 
-- Building or maintaining a Jellyfin plugin.
+- A multi-tenant administration surface; one admin key is enough.
 - Changing the public viewer experience.
-- Multi-tenant administration; one admin key is enough.
+- Bulk editing. Editing is per share.
 
-## Decisions
+## Implemented decisions
 
 - Admin page has two tabs: **Create** and **Shares**.
 - The Shares tab filters with a segmented control: **Active / Inactive / All**,
   defaulting to Active.
 - New shares are owned by the first Jellyfin user the backend resolves at
-  startup. No user picker.
-- The create form exposes the same terms the API accepts: expiry, never expires,
-  play limit, concurrent viewers, quality cap, password, downloads.
-
-## Current state
-
-- The backend already has `POST /api/admin/shares` (`internal/handlers/admin.go`)
-  which creates a share from a Jellyfin item id and user id.
-- `/admin` can list, inspect, and revoke shares, but has no create form.
-- `UpdateShare` exists in the handler but is not routed in `cmd/server/main.go`.
+  startup. The API still accepts an explicit `jellyfinUserId`.
+- Search returns films and series only. Series expand into seasons, and seasons
+  into episodes.
+- Mass actions are revoke and delete. Individual actions are copy, edit, and
+  revoke.
+- Stale links are deleted after a configurable retention window.
 
 ## User flow
 
 1. Admin opens `/admin`, already authenticated with the backend key.
 2. The top bar shows the wordmark, Create and Shares tabs, refresh, and sign out.
-3. On **Create**, the admin searches the Jellyfin library and picks a film,
-   episode, season, or series.
-4. Admin sets the link terms: expiry, play limit, concurrent viewers, quality
-   cap, password, and whether downloads are allowed.
-5. Admin creates the share and gets the public URL with a copy button.
-6. On **Shares**, the admin sees the new link and can filter Active, Inactive, or
-   All.
+3. On **Create**, the admin searches for a film or series. A series expands to
+   its seasons; a season expands to its episodes.
+4. The admin chooses the whole series, one season, one episode, or a film.
+5. The admin sets the link terms: expiry, play limit, concurrent viewers, quality
+   caps, password, and whether downloads are allowed.
+6. Creating shows the public URL with a copy button, Create another, and View in
+   Shares.
+7. On **Shares**, the admin filters Active, Inactive, or All, inspects links,
+   edits or revokes one, or selects several for a mass action.
 
-## Requirements
+## Item selection
 
-### Item selection
-
-- Search returns top-level films and series only, never a flat mix of episodes.
+- Search returns top-level films and series, never a flat mix of episodes.
 - Each series row expands to its seasons; each season expands to its episodes.
 - Each level has its own share action: **Share series**, **Share season**, or
   click an episode.
 - Seasons and episodes load lazily and are cached until Refresh; several series
   or seasons may stay open at once.
-- If a series has no Season children, show its episodes as one group.
+- If a series has no Season children, its episodes appear as one group.
 - The selected item supplies `jellyfinItemId`; the backend fills the owning
   Jellyfin user automatically.
-- The backend needs read access to the Jellyfin library from the admin API.
 
-### Form fields
+## Create form
 
-Match `models.CreateShareRequest`:
+Matches `models.CreateShareRequest`:
 
-- `expiresInMinutes` or `neverExpires`
+- `expiresInMinutes`, or `neverExpires`
 - `maxTotalPlays` (optional)
 - `maxConcurrentViewers` (optional)
 - `maxVideoHeight` (optional)
@@ -71,36 +65,37 @@ Match `models.CreateShareRequest`:
 - `password` (optional)
 - `allowDownload` (default on)
 
-### Shares tab
+## Shares tab
 
 - Segmented filter: Active / Inactive / All, default Active.
-- Inactive means revoked, expired, or play limit spent.
+- Inactive means revoked, expired, or out of plays.
 - Counts reflect the selected filter.
 - Revoke and detail views work in every filter.
-- Rows can be selected with checkboxes; shift-click selects a range.
-- A mass-action bar at the top of the list offers revoke and delete for the
-  selection. There is no bulk edit. Delete is only allowed for inactive links.
-- Each row has Copy link, Edit, and Revoke buttons. Edit opens a dialog for
-  expiry, play limit, concurrent viewers, and password.
+- Rows have checkboxes; shift-click selects a range, and select-all covers the
+  loaded page.
+- The mass-action bar offers revoke and delete. Delete is only allowed for
+  inactive links; active ids are skipped server-side.
+- Each row has Copy link, Edit, and Revoke. Edit is also available from the
+  detail sheet.
+- Edit fields: add days to expiry, play limit, concurrent viewers, set password,
+  remove password. Blank means unchanged; never-expiring links cannot be
+  extended.
 
-### Retention
+## Retention
 
 - Links are deleted once they have been expired or revoked for longer than
-  `JFSHARE_SHARE_RETENTION_DAYS` (default 365).
+  `JFSHARE_SHARE_RETENTION_DAYS` (default 365; `0` disables cleanup).
 - Live links and links that never expire are never deleted.
 
-### After creation
-
-- Show the public link and copy it.
-- The new share appears in the Shares tab without a full page reload.
-
-### Validation and errors
+## Validation and errors
 
 - Required: an item.
-- Show server errors inline; do not lose the form state.
-- Never log the admin key or the share password.
+- Server errors show inline and do not discard form state.
+- Mass actions report changed and skipped counts.
+- The admin key and share passwords are never logged.
 
-## Open questions
+## Out of scope for now
 
-- Any personal defaults worth prefilling (expiry, play limit, downloads)?
-- Should the quality cap offer bitrate presets or only heights?
+- Editing quality caps or download permission after creation.
+- Selecting multiple seasons without the whole series, or multiple episodes
+  without the whole season.
