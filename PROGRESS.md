@@ -409,9 +409,27 @@ pass.
   ranking.
 - Done when finding a known title takes fewer keystrokes than today.
 
+**Subtitle control on the share page** *(#15)*
+- Move track selection below Play and replace the collapsed "Change" row with a
+  visible, labelled Subtitles dropdown; decide where audio lives.
+- Keep the chosen track feeding playback, autoplay and casting, and check the
+  series/season and phone layouts.
+- Done when a viewer can see and change subtitles without opening a disclosure.
+
 **Backlog from use**
 - Revisit the items deliberately left out of v0.1.0 and promote whichever the
   family workflow actually needs.
+
+### 0.3.0 — viewer localization
+
+**Thai for the public share page** *(#16)*
+- Translate only the viewer-facing `/s/{token}` experience and player chrome:
+  password gate, Play/Resume/Download, terms, refusals, dead links, downloads
+  and cast notes. Admin stays English.
+- Default the link page to Thai; add Thai-capable fonts through the existing
+  tokens, and pin the date locale/calendar explicitly.
+- Done when a Thai-speaking viewer can use a link, including its errors, without
+  falling back to English.
 
 ## Testing notes
 
