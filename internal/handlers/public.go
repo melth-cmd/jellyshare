@@ -3,13 +3,13 @@ package handlers
 import (
 	"context"
 	"database/sql"
-	"strconv"
-	"strings"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -475,10 +475,10 @@ const minTranscodeBitrate = 1000000
 var codecBitrateFactor = map[string]float64{
 	"h264": 1.0, "avc": 1.0,
 	"hevc": 0.6, "h265": 0.6,
-	"av1":  0.5,
-	"vp9":  0.65,
-	"vp8":  1.1,
-	"vc1":  1.2,
+	"av1":   0.5,
+	"vp9":   0.65,
+	"vp8":   1.1,
+	"vc1":   1.2,
 	"mpeg4": 1.6, "msmpeg4v3": 1.6,
 	"mpeg2video": 2.0,
 }
@@ -590,7 +590,7 @@ func (h *PublicHandler) ValidatePassword(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Set session cookie
-	h.sessions.SetSessionCookie(w, token)
+	h.sessions.SetSessionCookie(w, r, token)
 
 	h.db.LogAuditEvent(r.Context(), database.AuditEventPasswordAttempt, &share.ID, nil, nil, &ipHash, map[string]interface{}{
 		"success": true,
@@ -644,11 +644,11 @@ func (h *PublicHandler) StartPlayback(w http.ResponseWriter, r *http.Request) {
 	if !share.CanStartNewPlay() {
 		ipHash := middleware.GetIPHash(r.Context())
 		h.db.LogAuditEvent(r.Context(), database.AuditEventPlaybackDenied, &share.ID, nil, nil, &ipHash, map[string]interface{}{
-			"reason":           "limit_reached",
-			"totalPlays":       share.TotalPlays,
-			"maxTotalPlays":    share.MaxTotalPlays,
+			"reason":            "limit_reached",
+			"totalPlays":        share.TotalPlays,
+			"maxTotalPlays":     share.MaxTotalPlays,
 			"concurrentViewers": share.CurrentConcurrentViewers,
-			"maxConcurrent":    share.MaxConcurrentViewers,
+			"maxConcurrent":     share.MaxConcurrentViewers,
 		})
 
 		if share.MaxTotalPlays.Valid && int64(share.TotalPlays) >= share.MaxTotalPlays.Int64 {

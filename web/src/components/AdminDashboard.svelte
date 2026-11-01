@@ -1,6 +1,7 @@
 <script>
   import BrandMark from './BrandMark.svelte';
   import CreatePanel from './CreatePanel.svelte';
+  import EditShareDialog from './EditShareDialog.svelte';
   import { copyText } from '../clipboard.js';
   import { onMount, tick, createEventDispatcher } from 'svelte';
 
@@ -39,6 +40,22 @@
   let copiedId = null;
   let copyTimer;
 
+  // Selection is for mass actions only. It is cleared by anything that changes
+  // which rows are on screen.
+  let selectedIds = new Set();
+  let selectionAnchor = null;
+  let selectAllEl;
+  let massConfirm = null;
+  let massBusy = false;
+  let massNotice = '';
+  let massError = '';
+  let editDialog;
+
+  $: if (selectAllEl) {
+    selectAllEl.indeterminate =
+      selectedIds.size > 0 && !(shares.length > 0 && shares.every((share) => selectedIds.has(share.id)));
+  }
+
   onMount(() => {
     const savedTab = sessionStorage.getItem(TAB_KEY);
     if (savedTab === 'create' || savedTab === 'shares') activeTab = savedTab;
@@ -49,6 +66,7 @@
   function setTab(tab) {
     activeTab = tab;
     sessionStorage.setItem(TAB_KEY, tab);
+    if (tab === 'create') clearSelection();
   }
 
   function refreshCurrent() {
@@ -84,8 +102,15 @@
     };
   }
 
+  function clearSelection() {
+    selectedIds = new Set();
+    selectionAnchor = null;
+    massConfirm = null;
+  }
+
   async function loadShares() {
     // A page still loading from before belongs to the list being replaced.
+    clearSelection();
     loadGeneration += 1;
     loadingMore = false;
     loading = true;
@@ -104,6 +129,81 @@
     if (status === statusFilter) return;
     statusFilter = status;
     loadShares();
+  }
+
+  function toggleSelection(event, index, id) {
+    const next = new Set(selectedIds);
+    const checking = !next.has(id);
+
+    if (event.shiftKey && selectionAnchor != null) {
+      const [start, end] =
+        index < selectionAnchor ? [index, selectionAnchor] : [selectionAnchor, index];
+      for (let i = start; i <= end; i += 1) {
+        const row = shares[i];
+        if (!row) continue;
+        if (checking) next.add(row.id);
+        else next.delete(row.id);
+      }
+    } else {
+      if (checking) next.add(id);
+      else next.delete(id);
+      selectionAnchor = index;
+    }
+
+    selectedIds = next;
+    massConfirm = null;
+    massNotice = '';
+    massError = '';
+  }
+
+  function toggleSelectAll(event) {
+    selectedIds = event.target.checked ? new Set(shares.map((share) => share.id)) : new Set();
+    selectionAnchor = null;
+    massConfirm = null;
+    massNotice = '';
+    massError = '';
+  }
+
+  async function runMassAction(action) {
+    if (selectedIds.size === 0) return;
+    massBusy = true;
+    massError = '';
+    massNotice = '';
+
+    try {
+      const response = await fetch(`/api/admin/shares/bulk/${action}`, {
+        method: 'POST',
+        headers: {
+          'X-Backend-Key': apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ids: [...selectedIds] })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || 'The action did not finish. Try again.');
+      }
+
+      const changed = (action === 'revoke' ? data.revoked : data.deleted) || [];
+      const skipped = data.skipped || [];
+      const verb = action === 'revoke' ? 'revoked' : 'deleted';
+      massNotice = `${changed.length} ${verb}${skipped.length ? `, ${skipped.length} skipped` : ''}.`;
+      await loadShares();
+    } catch (e) {
+      massError = e.message || 'The action did not finish. Try again.';
+    } finally {
+      massBusy = false;
+      massConfirm = null;
+    }
+  }
+
+  function openEdit(share) {
+    editDialog?.open(share);
+  }
+
+  async function onShareEdited() {
+    await loadShares();
+    massNotice = 'Link updated.';
   }
 
   // Bumped by every reload, so a page still loading from before it is dropped
@@ -177,6 +277,9 @@
         total = Math.max(0, total - 1);
       } else {
         shares = shares.map((s) => (s.id === share.id ? { ...s, revokedAt: new Date().toISOString() } : s));
+      }
+      if (selectedIds.has(share.id)) {
+        selectedIds = new Set([...selectedIds].filter((id) => id !== share.id));
       }
       if (selectedShare?.id === share.id) closeDetails();
     } catch (e) {
@@ -329,6 +432,54 @@
       </button>
     </div>
 
+    <div class="mass" aria-label="Selected links">
+      <label class="mass__all">
+        <input
+          bind:this={selectAllEl}
+          type="checkbox"
+          checked={shares.length > 0 && shares.every((share) => selectedIds.has(share.id))}
+          on:change={toggleSelectAll}
+          disabled={loading || shares.length === 0}
+        />
+        <span>Select all</span>
+      </label>
+
+      <span class="mass__count">{selectedIds.size} selected</span>
+
+      <div class="mass__actions">
+        {#if massConfirm === 'revoke'}
+          <button class="btn-danger" on:click={() => runMassAction('revoke')} disabled={massBusy}>
+            Revoke {selectedIds.size}
+          </button>
+          <button class="btn-ghost" on:click={() => (massConfirm = null)} disabled={massBusy}>Cancel</button>
+        {:else if massConfirm === 'delete'}
+          <button class="btn-danger" on:click={() => runMassAction('delete')} disabled={massBusy}>
+            Delete {selectedIds.size}
+          </button>
+          <button class="btn-ghost" on:click={() => (massConfirm = null)} disabled={massBusy}>Cancel</button>
+        {:else}
+          <button class="btn-ghost" on:click={() => (massConfirm = 'revoke')} disabled={selectedIds.size === 0 || massBusy}>
+            Revoke selected
+          </button>
+          <button class="btn-ghost" on:click={() => (massConfirm = 'delete')} disabled={selectedIds.size === 0 || massBusy}>
+            Delete selected
+          </button>
+          <button class="btn-ghost" on:click={clearSelection} disabled={selectedIds.size === 0 || massBusy}>Clear</button>
+        {/if}
+      </div>
+
+      {#if massConfirm}
+        <p class="mass__warning">
+          {massConfirm === 'delete'
+            ? 'Only inactive links are deleted. Active links are left alone.'
+            : 'Anyone watching one of these links is disconnected.'}
+        </p>
+      {/if}
+    </div>
+
+    {#if massNotice}<p class="banner banner--ok" role="status">{massNotice}</p>{/if}
+    {#if massError}<p class="banner" role="alert">{massError}</p>{/if}
+
     {#if loading}
       <div class="state">
         <div class="state__meter"></div>
@@ -358,13 +509,21 @@
       {/if}
 
       <div class="labels" aria-hidden="true">
-        <span>Item</span><span>Status</span><span>Plays</span><span>Expires</span><span></span>
+        <span></span><span>Item</span><span>Status</span><span>Plays</span><span>Expires</span><span></span>
       </div>
 
       <ul class="rows">
-        {#each shares as share (share.id)}
+        {#each shares as share, index (share.id)}
           {@const status = getStatus(share)}
           <li class="row" class:row--spent={status !== 'active'}>
+            <span class="row__check">
+              <input
+                type="checkbox"
+                checked={selectedIds.has(share.id)}
+                on:click={(event) => toggleSelection(event, index, share.id)}
+                aria-label={`Select ${share.title}`}
+              />
+            </span>
             <button class="row__item" data-id={share.id} on:click={() => viewDetails(share)}>
               <span class="row__title">{share.title}</span>
               <span class="row__sub">
@@ -397,6 +556,7 @@
                 <button class="btn-ghost" on:click={() => copyLink(share)}>
                   {copiedId === share.id ? 'Copied' : 'Copy link'}
                 </button>
+                <button class="btn-ghost" on:click={() => openEdit(share)}>Edit</button>
                 {#if status === 'active'}
                   <button class="btn-ghost btn-ghost--warn" on:click={() => (confirmingId = share.id)}>
                     Revoke
@@ -450,11 +610,14 @@
   <div class="sheet__panel">
     <header class="sheet__head">
       <h2>{selectedShare?.title || ''}</h2>
-      <button class="pill__icon" on:click={closeDetails} aria-label="Close details">
+      <div class="sheet__tools">
+        <button class="btn-ghost" on:click={() => { closeDetails(); openEdit(selectedShare); }}>Edit link</button>
+        <button class="pill__icon" on:click={closeDetails} aria-label="Close details">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
           <path d="M18 6L6 18M6 6l12 12"/>
         </svg>
-      </button>
+        </button>
+      </div>
     </header>
 
     {#if detailsLoading}
@@ -520,6 +683,8 @@
     {/if}
   </div>
 </dialog>
+
+<EditShareDialog {apiKey} bind:this={editDialog} on:saved={onShareEdited} />
 
 <style>
   /* Hallmark · genre: atmospheric · macrostructure: 13 Index-First
@@ -711,6 +876,52 @@
 
   .filter:active { transform: translateY(1px); }
 
+  .mass {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+    padding-block: var(--space-sm);
+    margin-bottom: var(--space-md);
+    border-bottom: var(--rule-hair) solid var(--color-rule-2);
+  }
+
+  .mass__all {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-sm);
+    color: var(--color-ink-2);
+    cursor: pointer;
+  }
+
+  .mass__all input {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+  }
+
+  .mass__count {
+    font-family: var(--font-outlier);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-muted);
+  }
+
+  .mass__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin-inline-start: auto;
+  }
+
+  .mass__warning {
+    flex-basis: 100%;
+    font-size: var(--text-sm);
+    color: var(--color-muted);
+  }
+
   .labels {
     display: none;
     padding-block: var(--space-xs);
@@ -726,13 +937,34 @@
 
   .row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 1.5rem minmax(0, 1fr);
     gap: var(--space-xs) var(--space-md);
     align-items: baseline;
     padding-block: var(--space-md);
     border-bottom: var(--rule-hair) solid var(--color-rule-2);
     transition: transform var(--dur-micro) var(--ease-out);
   }
+
+  .row__check {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    justify-content: center;
+    padding-top: 0.3rem;
+  }
+
+  .row__check input {
+    width: 1.05rem;
+    height: 1.05rem;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+  }
+
+  .row__item,
+  .row__status,
+  .row__num,
+  .row__expiry,
+  .row__actions { grid-column: 2; }
 
   @media (hover: hover) {
     .row:hover { transform: translateY(-1px); }
@@ -907,6 +1139,8 @@
     font-size: var(--text-sm);
   }
 
+  .banner--ok { color: var(--color-ink-2); }
+
   /* ---- Ft4 · Dense colophon ---- */
   .colophon {
     display: grid;
@@ -961,6 +1195,13 @@
     font-size: var(--text-lg);
     overflow-wrap: anywhere;
     min-width: 0;
+  }
+
+  .sheet__tools {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-xs);
   }
 
   .spec {
@@ -1043,10 +1284,17 @@
     .labels,
     .row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 7rem 8rem 7rem 13.5rem;
+      grid-template-columns: 1.75rem minmax(0, 1fr) 7rem 8rem 7rem 13.5rem;
       gap: var(--space-md);
       align-items: baseline;
     }
+
+    .row__check,
+    .row__item,
+    .row__status,
+    .row__num,
+    .row__expiry,
+    .row__actions { grid-column: auto; }
 
     .row { padding-block: var(--space-lg); }
 

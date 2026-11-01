@@ -11,16 +11,17 @@ import (
 type AuditEventType string
 
 const (
-	AuditEventShareCreated     AuditEventType = "share_created"
-	AuditEventShareRevoked     AuditEventType = "share_revoked"
-	AuditEventShareUpdated     AuditEventType = "share_updated"
-	AuditEventShareAccessed    AuditEventType = "share_accessed"
-	AuditEventPasswordAttempt  AuditEventType = "password_attempt"
-	AuditEventPlaybackStarted  AuditEventType = "playback_started"
-	AuditEventPlaybackEnded    AuditEventType = "playback_ended"
-	AuditEventPlaybackDenied   AuditEventType = "playback_denied"
-	AuditEventSessionTimeout   AuditEventType = "session_timeout"
-	AuditEventDownloadStarted  AuditEventType = "download_started"
+	AuditEventShareCreated    AuditEventType = "share_created"
+	AuditEventShareRevoked    AuditEventType = "share_revoked"
+	AuditEventShareUpdated    AuditEventType = "share_updated"
+	AuditEventShareDeleted    AuditEventType = "share_deleted"
+	AuditEventShareAccessed   AuditEventType = "share_accessed"
+	AuditEventPasswordAttempt AuditEventType = "password_attempt"
+	AuditEventPlaybackStarted AuditEventType = "playback_started"
+	AuditEventPlaybackEnded   AuditEventType = "playback_ended"
+	AuditEventPlaybackDenied  AuditEventType = "playback_denied"
+	AuditEventSessionTimeout  AuditEventType = "session_timeout"
+	AuditEventDownloadStarted AuditEventType = "download_started"
 )
 
 type AuditLog struct {

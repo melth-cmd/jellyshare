@@ -109,8 +109,11 @@ func (m *ShareSessionManager) ValidateSessionToken(token string) (string, bool) 
 	return shareToken, true
 }
 
-// SetSessionCookie sets the session cookie for a password-protected share
-func (m *ShareSessionManager) SetSessionCookie(w http.ResponseWriter, shareToken string) {
+// SetSessionCookie sets the session cookie for a password-protected share.
+// Secure is set only when the viewer reached the backend over HTTPS; a Secure
+// cookie is silently dropped on plain HTTP, which otherwise puts the password
+// gate in an endless loop on a LAN or dev deployment.
+func (m *ShareSessionManager) SetSessionCookie(w http.ResponseWriter, r *http.Request, shareToken string) {
 	token := m.CreateSessionToken(shareToken)
 	http.SetCookie(w, &http.Cookie{
 		Name:     ShareSessionCookieName,
@@ -118,9 +121,20 @@ func (m *ShareSessionManager) SetSessionCookie(w http.ResponseWriter, shareToken
 		Path:     "/",
 		MaxAge:   int(cookieMaxAge.Seconds()),
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   requestIsHTTPS(r),
 		SameSite: http.SameSiteLaxMode,
 	})
+}
+
+func requestIsHTTPS(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+	forwarded := r.Header.Get("X-Forwarded-Proto")
+	if i := strings.IndexByte(forwarded, ','); i >= 0 {
+		forwarded = forwarded[:i]
+	}
+	return strings.EqualFold(strings.TrimSpace(forwarded), "https")
 }
 
 // GetSessionFromCookie extracts and validates the session from the cookie

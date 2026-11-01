@@ -362,6 +362,99 @@ func (h *AdminHandler) RevokeShare(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "revoked"})
 }
 
+const maxBulkShareIDs = 200
+
+func parseBulkShareIDs(w http.ResponseWriter, r *http.Request) ([]uuid.UUID, bool) {
+	var req models.BulkShareIDsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return nil, false
+	}
+
+	seen := make(map[uuid.UUID]struct{}, len(req.IDs))
+	ids := make([]uuid.UUID, 0, len(req.IDs))
+	for _, id := range req.IDs {
+		if _, duplicate := seen[id]; duplicate {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+
+	if len(ids) == 0 {
+		writeError(w, http.StatusBadRequest, "ids is required")
+		return nil, false
+	}
+	if len(ids) > maxBulkShareIDs {
+		writeError(w, http.StatusBadRequest, "too many ids")
+		return nil, false
+	}
+	return ids, true
+}
+
+func idsNotIn(all, done []uuid.UUID) []uuid.UUID {
+	changed := make(map[uuid.UUID]struct{}, len(done))
+	for _, id := range done {
+		changed[id] = struct{}{}
+	}
+	rest := make([]uuid.UUID, 0, len(all))
+	for _, id := range all {
+		if _, found := changed[id]; !found {
+			rest = append(rest, id)
+		}
+	}
+	return rest
+}
+
+func (h *AdminHandler) BulkRevokeShares(w http.ResponseWriter, r *http.Request) {
+	ids, ok := parseBulkShareIDs(w, r)
+	if !ok {
+		return
+	}
+
+	revoked, err := h.db.RevokeShares(r.Context(), ids)
+	if err != nil {
+		log.Printf("Failed to bulk revoke shares: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to revoke shares")
+		return
+	}
+
+	for _, id := range revoked {
+		h.db.TerminateAllSessionsForShare(r.Context(), id, models.TerminationReasonRevoked)
+		h.db.LogAuditEvent(r.Context(), database.AuditEventShareRevoked, &id, nil, nil, nil, nil)
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"revoked": revoked,
+		"skipped": idsNotIn(ids, revoked),
+	})
+}
+
+func (h *AdminHandler) BulkDeleteShares(w http.ResponseWriter, r *http.Request) {
+	ids, ok := parseBulkShareIDs(w, r)
+	if !ok {
+		return
+	}
+
+	deleted, err := h.db.DeleteInactiveShares(r.Context(), ids)
+	if err != nil {
+		log.Printf("Failed to bulk delete shares: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to delete shares")
+		return
+	}
+
+	if len(deleted) > 0 {
+		h.db.LogAuditEvent(r.Context(), database.AuditEventShareDeleted, nil, nil, nil, nil, map[string]interface{}{
+			"deleted": deleted,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"deleted": deleted,
+		"skipped": idsNotIn(ids, deleted),
+	})
+}
+
 func (h *AdminHandler) UpdateShare(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)

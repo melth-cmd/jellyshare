@@ -377,6 +377,10 @@ type ShareListItem struct {
 	PublicURL string `json:"publicUrl"`
 }
 
+type BulkShareIDsRequest struct {
+	IDs []uuid.UUID `json:"ids"`
+}
+
 type UpdateShareRequest struct {
 	MaxTotalPlays        *int    `json:"maxTotalPlays,omitempty"`
 	MaxConcurrentViewers *int    `json:"maxConcurrentViewers,omitempty"`
