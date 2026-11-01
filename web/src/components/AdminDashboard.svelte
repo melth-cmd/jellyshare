@@ -324,7 +324,7 @@
   <!-- Ft4 · Dense colophon -->
   <footer class="colophon">
     <p class="colophon__line">
-      <a class="foot-link" href="https://github.com/stanislavhannes/jellyfin-share-backend" target="_blank" rel="noopener noreferrer">Jellyfin Share</a>
+      <a class="foot-link" href="https://github.com/melth-cmd/jellyfin-share-backend" target="_blank" rel="noopener noreferrer">Jellyfin Share</a>
       · admin · {total} indexed, {live} live
     </p>
     <p class="colophon__note">

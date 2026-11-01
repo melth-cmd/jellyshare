@@ -14,13 +14,13 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
-	"github.com/jellyfin-share/jellyfin-share-backend/internal/config"
-	"github.com/jellyfin-share/jellyfin-share-backend/internal/database"
-	"github.com/jellyfin-share/jellyfin-share-backend/internal/download"
-	"github.com/jellyfin-share/jellyfin-share-backend/internal/handlers"
-	"github.com/jellyfin-share/jellyfin-share-backend/internal/jellyfin"
-	"github.com/jellyfin-share/jellyfin-share-backend/internal/middleware"
-	"github.com/jellyfin-share/jellyfin-share-backend/internal/proxy"
+	"github.com/melth-cmd/jellyfin-share-backend/internal/config"
+	"github.com/melth-cmd/jellyfin-share-backend/internal/database"
+	"github.com/melth-cmd/jellyfin-share-backend/internal/download"
+	"github.com/melth-cmd/jellyfin-share-backend/internal/handlers"
+	"github.com/melth-cmd/jellyfin-share-backend/internal/jellyfin"
+	"github.com/melth-cmd/jellyfin-share-backend/internal/middleware"
+	"github.com/melth-cmd/jellyfin-share-backend/internal/proxy"
 )
 
 func main() {

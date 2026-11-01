@@ -18,9 +18,9 @@ web
   technical, who opens the link on whatever device they have: a phone, a laptop,
   sometimes a browser they then cast to a TV from. Their job is to start watching,
   with the right audio and subtitles, and pick up where they left off.
-- **Installer.** This is a public open-source fork, so other self-hosters read the
-  README, set up `.env` and run it with Docker Compose. Setup docs and defaults are
-  part of the product.
+- **Installer.** This is a private build, so other self-hosters read the README,
+  set up `.env` and run it with Docker Compose. Setup docs and defaults are part
+  of the product.
 
 ## Product Purpose
 
@@ -92,7 +92,7 @@ These are in priority order. When two of them conflict, the higher one wins.
 
 - Screenshots: `docs/screenshots/share-movie.png`, `share-series.png`,
   `admin-dashboard.png`.
-- The README's "What this fork changes" section has measured security and playback
+- The README's "Notable changes" section has measured security and playback
   fixes, each reproduced against a live Jellyfin.
 - There are no user counts, testimonials, press or benchmarks beyond those notes.
   Do not invent any.

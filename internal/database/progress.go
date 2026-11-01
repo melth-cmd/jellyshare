@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/jellyfin-share/jellyfin-share-backend/internal/models"
+	"github.com/melth-cmd/jellyfin-share-backend/internal/models"
 )
 
 // SaveProgress records where a link's viewers got to in one item, whichever
