@@ -45,6 +45,19 @@
   let searchGeneration = 0;
   let searchTimer;
 
+  // The picker is a tree. Seasons and episodes load on first expand and stay
+  // cached until Refresh or a new search result set replaces them.
+  let expandedSeries = new Set();
+  let expandedSeasons = new Set();
+  let seriesSeasons = {};
+  let seasonEpisodes = {};
+  let seriesEpisodes = {};
+  let seriesFallback = {};
+  let seasonsLoading = {};
+  let seasonsError = {};
+  let episodesLoading = {};
+  let episodesError = {};
+
   let expiryChoice = '43200';
   let customDays = '30';
   let maxPlays = '';
@@ -69,7 +82,93 @@
   });
 
   export function reload() {
-    if (!created) runSearch(searchQuery);
+    if (created) return;
+    clearLibraryCache();
+    runSearch(searchQuery);
+  }
+
+  function clearLibraryCache() {
+    expandedSeries = new Set();
+    expandedSeasons = new Set();
+    seriesSeasons = {};
+    seasonEpisodes = {};
+    seriesEpisodes = {};
+    seriesFallback = {};
+    seasonsLoading = {};
+    seasonsError = {};
+    episodesLoading = {};
+    episodesError = {};
+  }
+
+  async function fetchList(url) {
+    const response = await fetch(url, { headers: { 'X-Backend-Key': apiKey } });
+    if (!response.ok) throw new Error('request failed');
+    return response.json();
+  }
+
+  function toggleIn(set, id) {
+    const next = new Set(set);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  }
+
+  function seriesOpen(id) {
+    return expandedSeries.has(id);
+  }
+
+  function seasonOpen(id) {
+    return expandedSeasons.has(id);
+  }
+
+  async function toggleSeries(id) {
+    expandedSeries = toggleIn(expandedSeries, id);
+    if (expandedSeries.has(id)) await loadSeasons(id);
+  }
+
+  async function toggleSeason(id) {
+    expandedSeasons = toggleIn(expandedSeasons, id);
+    if (expandedSeasons.has(id)) await loadEpisodes(id);
+  }
+
+  async function loadSeasons(seriesID, force = false) {
+    if (!force && (seriesSeasons[seriesID] || seasonsLoading[seriesID])) return;
+
+    seasonsLoading = { ...seasonsLoading, [seriesID]: true };
+    seasonsError = { ...seasonsError, [seriesID]: '' };
+    try {
+      const data = await fetchList(`/api/admin/jellyfin/series/${seriesID}/seasons`);
+      const seasons = data.seasons || [];
+      if (seasons.length === 0) {
+        // Some libraries have episodes without Season objects. Show them as one
+        // group rather than leaving the series looking empty.
+        const fallback = await fetchList(`/api/admin/jellyfin/series/${seriesID}/episodes`);
+        seriesEpisodes = { ...seriesEpisodes, [seriesID]: fallback.episodes || [] };
+        seriesFallback = { ...seriesFallback, [seriesID]: true };
+      } else {
+        seriesSeasons = { ...seriesSeasons, [seriesID]: seasons };
+        seriesFallback = { ...seriesFallback, [seriesID]: false };
+      }
+    } catch (e) {
+      seasonsError = { ...seasonsError, [seriesID]: 'Couldn’t load seasons.' };
+    } finally {
+      seasonsLoading = { ...seasonsLoading, [seriesID]: false };
+    }
+  }
+
+  async function loadEpisodes(seasonID, force = false) {
+    if (!force && (seasonEpisodes[seasonID] || episodesLoading[seasonID])) return;
+
+    episodesLoading = { ...episodesLoading, [seasonID]: true };
+    episodesError = { ...episodesError, [seasonID]: '' };
+    try {
+      const data = await fetchList(`/api/admin/jellyfin/seasons/${seasonID}/episodes`);
+      seasonEpisodes = { ...seasonEpisodes, [seasonID]: data.episodes || [] };
+    } catch (e) {
+      episodesError = { ...episodesError, [seasonID]: 'Couldn’t load episodes.' };
+    } finally {
+      episodesLoading = { ...episodesLoading, [seasonID]: false };
+    }
   }
 
   function onSearchInput() {
@@ -117,6 +216,18 @@
 
   function pad(value) {
     return String(value).padStart(2, '0');
+  }
+
+  function seasonLabel(season) {
+    if (season.seasonNumber === 0) return 'Specials';
+    return season.name || `Season ${season.seasonNumber}`;
+  }
+
+  function episodeLabel(episode) {
+    const code = episode.seasonNumber
+      ? `S${pad(episode.seasonNumber)}E${pad(episode.episodeNumber || 0)}`
+      : '';
+    return [code, episode.name].filter(Boolean).join(' · ');
   }
 
   function itemContext(item) {
@@ -237,6 +348,7 @@
     searchQuery = '';
     results = [];
     searchError = '';
+    clearLibraryCache();
     expiryChoice = '43200';
     customDays = '30';
     maxPlays = '';
@@ -306,7 +418,7 @@
               type="search"
               bind:value={searchQuery}
               on:input={onSearchInput}
-              placeholder="Film, series, season, or episode"
+              placeholder="Film or series"
               autocomplete="off"
             />
           </label>
@@ -329,17 +441,128 @@
             {:else}
               <ul class="pick">
                 {#each results as item (item.id)}
-                  <li>
-                    <button class="pick__row" type="button" on:click={() => choose(item)}>
-                      <span class="pick__poster">
-                        <PosterThumb {apiKey} itemId={item.id} alt="" maxWidth={160} />
-                      </span>
-                      <span class="pick__text">
-                        <span class="pick__title">{item.name}</span>
-                        <span class="pick__sub">{itemContext(item)}</span>
-                      </span>
-                    </button>
-                  </li>
+                  {#if item.type === 'Series'}
+                    <li class="node">
+                      <div class="node__row">
+                        <button
+                          class="node__toggle"
+                          type="button"
+                          aria-expanded={seriesOpen(item.id)}
+                          aria-controls="series-{item.id}"
+                          on:click={() => toggleSeries(item.id)}
+                        >
+                          <svg class="chevron" class:chevron--open={seriesOpen(item.id)} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                            <path d="M9 6l6 6-6 6" />
+                          </svg>
+                          <span class="pick__poster">
+                            <PosterThumb {apiKey} itemId={item.id} alt="" maxWidth={160} />
+                          </span>
+                          <span class="pick__text">
+                            <span class="pick__title">{item.name}</span>
+                            <span class="pick__sub">{itemContext(item)}</span>
+                          </span>
+                        </button>
+                        <button class="share-btn" type="button" on:click={() => choose(item)}>Share series</button>
+                      </div>
+
+                      {#if seriesOpen(item.id)}
+                        <div class="branch" id="series-{item.id}">
+                          {#if seasonsLoading[item.id]}
+                            <div class="pick-state">
+                              <span class="meter" aria-hidden="true"></span>
+                              <p>Loading seasons</p>
+                            </div>
+                          {:else if seasonsError[item.id]}
+                            <div class="pick-state pick-state--error">
+                              <p>{seasonsError[item.id]}</p>
+                              <button class="btn-ghost" type="button" on:click={() => loadSeasons(item.id, true)}>Try again</button>
+                            </div>
+                          {:else if seriesFallback[item.id]}
+                            <p class="branch__note">No seasons found; showing episodes.</p>
+                            {#each seriesEpisodes[item.id] || [] as episode (episode.id)}
+                              <button class="pick__row pick__row--episode" type="button" on:click={() => choose(episode)}>
+                                <span class="pick__poster pick__poster--small">
+                                  <PosterThumb {apiKey} itemId={episode.id} alt="" maxWidth={120} />
+                                </span>
+                                <span class="pick__text">
+                                  <span class="pick__title">{episode.name}</span>
+                                  <span class="pick__sub">{episodeLabel(episode)}</span>
+                                </span>
+                              </button>
+                            {:else}
+                              <p class="branch__empty">No episodes found in Jellyfin.</p>
+                            {/each}
+                          {:else}
+                            {#each seriesSeasons[item.id] || [] as season (season.id)}
+                              <div class="node node--season">
+                                <div class="node__row">
+                                  <button
+                                    class="node__toggle node__toggle--season"
+                                    type="button"
+                                    aria-expanded={seasonOpen(season.id)}
+                                    aria-controls="season-{season.id}"
+                                    on:click={() => toggleSeason(season.id)}
+                                  >
+                                    <svg class="chevron" class:chevron--open={seasonOpen(season.id)} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                      <path d="M9 6l6 6-6 6" />
+                                    </svg>
+                                    <span class="pick__text">
+                                      <span class="pick__title">{seasonLabel(season)}</span>
+                                    </span>
+                                  </button>
+                                  <button class="share-btn" type="button" on:click={() => choose(season)}>Share season</button>
+                                </div>
+
+                                {#if seasonOpen(season.id)}
+                                  <div class="branch branch--episodes" id="season-{season.id}">
+                                    {#if episodesLoading[season.id]}
+                                      <div class="pick-state">
+                                        <span class="meter" aria-hidden="true"></span>
+                                        <p>Loading episodes</p>
+                                      </div>
+                                    {:else if episodesError[season.id]}
+                                      <div class="pick-state pick-state--error">
+                                        <p>{episodesError[season.id]}</p>
+                                        <button class="btn-ghost" type="button" on:click={() => loadEpisodes(season.id, true)}>Try again</button>
+                                      </div>
+                                    {:else}
+                                      {#each seasonEpisodes[season.id] || [] as episode (episode.id)}
+                                        <button class="pick__row pick__row--episode" type="button" on:click={() => choose(episode)}>
+                                          <span class="pick__poster pick__poster--small">
+                                            <PosterThumb {apiKey} itemId={episode.id} alt="" maxWidth={120} />
+                                          </span>
+                                          <span class="pick__text">
+                                            <span class="pick__title">{episode.name}</span>
+                                            <span class="pick__sub">{episodeLabel(episode)}</span>
+                                          </span>
+                                        </button>
+                                      {:else}
+                                        <p class="branch__empty">No episodes found in this season.</p>
+                                      {/each}
+                                    {/if}
+                                  </div>
+                                {/if}
+                              </div>
+                            {:else}
+                              <p class="branch__empty">No seasons found in Jellyfin.</p>
+                            {/each}
+                          {/if}
+                        </div>
+                      {/if}
+                    </li>
+                  {:else}
+                    <li>
+                      <button class="pick__row" type="button" on:click={() => choose(item)}>
+                        <span class="pick__poster">
+                          <PosterThumb {apiKey} itemId={item.id} alt="" maxWidth={160} />
+                        </span>
+                        <span class="pick__text">
+                          <span class="pick__title">{item.name}</span>
+                          <span class="pick__sub">{itemContext(item)}</span>
+                        </span>
+                      </button>
+                    </li>
+                  {/if}
                 {/each}
               </ul>
             {/if}
@@ -549,6 +772,83 @@
   .results { max-width: 46rem; }
 
   .pick { list-style: none; margin: 0; padding: 0; max-height: 24rem; overflow-y: auto; }
+
+  .node { display: block; }
+
+  .node__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs);
+    border-bottom: var(--rule-hair) solid var(--color-rule-2);
+  }
+
+  .node__toggle {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--space-sm);
+    min-width: 0;
+    padding: var(--space-xs);
+    background: none;
+    color: var(--color-ink);
+    text-align: start;
+    border: none;
+    cursor: pointer;
+  }
+
+  .node__toggle--season { padding-block: var(--space-2xs); }
+
+  .chevron {
+    flex: none;
+    width: 0.9rem;
+    height: 0.9rem;
+    color: var(--color-muted);
+    transition: transform var(--dur-micro) var(--ease-out);
+  }
+
+  .chevron--open { transform: rotate(90deg); }
+
+  .share-btn {
+    flex: none;
+    min-height: 2rem;
+    margin-inline-end: var(--space-xs);
+    padding-inline: var(--space-sm);
+    background: none;
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    white-space: nowrap;
+    border: var(--rule-hair) solid var(--color-rule);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+  }
+
+  @media (hover: hover) {
+    .node__toggle:hover .pick__title { color: var(--color-accent); }
+    .share-btn:hover { background: var(--color-paper-2); color: var(--color-ink); }
+  }
+
+  .share-btn:active { transform: translateY(1px); }
+
+  .branch {
+    margin-inline-start: 1.35rem;
+    padding-inline-start: var(--space-sm);
+    border-inline-start: var(--rule-hair) solid var(--color-rule-2);
+  }
+
+  .branch--episodes { margin-inline-start: 0.9rem; }
+
+  .branch__note,
+  .branch__empty {
+    padding: var(--space-sm) var(--space-xs);
+    font-size: var(--text-sm);
+    color: var(--color-muted);
+  }
+
+  .pick__poster--small { width: 2rem; }
+
+  .pick__row--episode { padding-block: var(--space-2xs); }
 
   .pick__row {
     display: flex;

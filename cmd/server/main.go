@@ -103,6 +103,9 @@ func main() {
 		r.Get("/stats", adminHandler.GetStats)
 		r.Get("/jellyfin/items", adminHandler.SearchLibrary)
 		r.Get("/jellyfin/items/{id}/poster", adminHandler.GetItemPoster)
+		r.Get("/jellyfin/series/{id}/seasons", adminHandler.ListSeriesSeasons)
+		r.Get("/jellyfin/series/{id}/episodes", adminHandler.ListSeriesEpisodes)
+		r.Get("/jellyfin/seasons/{id}/episodes", adminHandler.ListSeasonEpisodes)
 	})
 
 	// Public API. The calls a viewer makes by hand share a per-IP rate limit.

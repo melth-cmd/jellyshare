@@ -76,9 +76,7 @@ func TestSearchItemsQueriesLibraryAndMapsResults(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"Items":[
 			{"Id":"m1","Name":"Alien","Type":"Movie","ProductionYear":1979,"RunTimeTicks":70200000000,"ImageTags":{"Primary":"tag"}},
-			{"Id":"s1","Name":"Alien","Type":"Series","ProductionYear":2025},
-			{"Id":"se1","Name":"Season 1","Type":"Season","IndexNumber":1},
-			{"Id":"e1","Name":"Neverland","Type":"Episode","SeriesName":"Alien","SeasonName":"Season 1","ParentIndexNumber":1,"IndexNumber":3}
+			{"Id":"s1","Name":"Alien","Type":"Series","ProductionYear":2025}
 		]}`))
 	}))
 	defer srv.Close()
@@ -98,25 +96,21 @@ func TestSearchItemsQueriesLibraryAndMapsResults(t *testing.T) {
 	if got.Get("SortBy") != "SortName" {
 		t.Errorf("SortBy = %q, want SortName", got.Get("SortBy"))
 	}
-	if types := got.Get("IncludeItemTypes"); !strings.Contains(types, "Movie") || !strings.Contains(types, "Episode") {
-		t.Errorf("IncludeItemTypes = %q", types)
+	if types := got.Get("IncludeItemTypes"); types != "Movie,Series" {
+		t.Errorf("IncludeItemTypes = %q, want only top-level Movie,Series", types)
 	}
 	if fields := got.Get("Fields"); !strings.Contains(fields, "Overview") || !strings.Contains(fields, "ImageTags") {
 		t.Errorf("Fields = %q", fields)
 	}
 
-	if len(items) != 4 {
-		t.Fatalf("got %d items, want 4", len(items))
+	if len(items) != 2 {
+		t.Fatalf("got %d items, want 2", len(items))
 	}
 	if items[0].Year != 1979 || !items[0].HasPoster || items[0].RuntimeSeconds != 7020 {
 		t.Errorf("movie mapped wrong: %+v", items[0])
 	}
-	if items[2].SeasonNumber != 1 {
-		t.Errorf("season number = %d, want 1", items[2].SeasonNumber)
-	}
-	ep := items[3]
-	if ep.SeriesName != "Alien" || ep.SeasonName != "Season 1" || ep.SeasonNumber != 1 || ep.EpisodeNumber != 3 {
-		t.Errorf("episode mapped wrong: %+v", ep)
+	if items[1].Type != "Series" || items[1].Year != 2025 {
+		t.Errorf("series mapped wrong: %+v", items[1])
 	}
 }
 
@@ -159,5 +153,57 @@ func TestSearchItemsReportsJellyfinErrors(t *testing.T) {
 	c.userID = "u"
 	if _, err := c.SearchItems(context.Background(), "alien", 5); err == nil {
 		t.Fatal("expected an error")
+	}
+}
+
+func TestBrowseSeasonsAndEpisodes(t *testing.T) {
+	var got url.Values
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r.URL.Query()
+		w.Header().Set("Content-Type", "application/json")
+		switch got.Get("IncludeItemTypes") {
+		case "Season":
+			w.Write([]byte(`{"Items":[
+				{"Id":"se0","Name":"Specials","Type":"Season","IndexNumber":0},
+				{"Id":"se1","Name":"Season 1","Type":"Season","IndexNumber":1,"ImageTags":{"Primary":"tag"}}
+			]}`))
+		case "Episode":
+			w.Write([]byte(`{"Items":[
+				{"Id":"e1","Name":"Pilot","Type":"Episode","SeriesName":"Alien","ParentIndexNumber":1,"IndexNumber":1,"RunTimeTicks":3000000000}
+			]}`))
+		}
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, "key")
+	c.userID = "u"
+
+	seasons, err := c.BrowseSeasons(context.Background(), "series1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Get("ParentId") != "series1" || got.Get("SortBy") != "IndexNumber" || got.Get("Recursive") != "" {
+		t.Errorf("season query = %v", got)
+	}
+	if len(seasons) != 2 || seasons[0].SeasonNumber != 0 || seasons[1].SeasonNumber != 1 || !seasons[1].HasPoster {
+		t.Errorf("seasons mapped wrong: %+v", seasons)
+	}
+
+	episodes, err := c.BrowseEpisodes(context.Background(), "season1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Get("ParentId") != "season1" || got.Get("SortBy") != "IndexNumber" {
+		t.Errorf("episode query = %v", got)
+	}
+	if len(episodes) != 1 || episodes[0].SeasonNumber != 1 || episodes[0].EpisodeNumber != 1 || episodes[0].RuntimeSeconds != 300 {
+		t.Errorf("episode mapped wrong: %+v", episodes)
+	}
+
+	if _, err := c.BrowseSeriesEpisodes(context.Background(), "series1"); err != nil {
+		t.Fatal(err)
+	}
+	if got.Get("ParentId") != "series1" || got.Get("Recursive") != "true" || got.Get("SortBy") != "ParentIndexNumber,IndexNumber" {
+		t.Errorf("fallback episode query = %v", got)
 	}
 }

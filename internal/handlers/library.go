@@ -39,6 +39,51 @@ func (h *AdminHandler) SearchLibrary(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items})
 }
 
+func (h *AdminHandler) ListSeriesSeasons(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if !jellyfinItemIDPattern.MatchString(id) {
+		writeError(w, http.StatusBadRequest, "invalid series id")
+		return
+	}
+	seasons, err := h.jf.BrowseSeasons(r.Context(), id)
+	if err != nil {
+		log.Printf("Failed to list seasons for %s: %v", id, err)
+		writeError(w, http.StatusBadGateway, "failed to load seasons from Jellyfin")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"seasons": seasons})
+}
+
+func (h *AdminHandler) ListSeriesEpisodes(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if !jellyfinItemIDPattern.MatchString(id) {
+		writeError(w, http.StatusBadRequest, "invalid series id")
+		return
+	}
+	episodes, err := h.jf.BrowseSeriesEpisodes(r.Context(), id)
+	if err != nil {
+		log.Printf("Failed to list episodes for series %s: %v", id, err)
+		writeError(w, http.StatusBadGateway, "failed to load episodes from Jellyfin")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"episodes": episodes})
+}
+
+func (h *AdminHandler) ListSeasonEpisodes(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if !jellyfinItemIDPattern.MatchString(id) {
+		writeError(w, http.StatusBadRequest, "invalid season id")
+		return
+	}
+	episodes, err := h.jf.BrowseEpisodes(r.Context(), id)
+	if err != nil {
+		log.Printf("Failed to list episodes for season %s: %v", id, err)
+		writeError(w, http.StatusBadGateway, "failed to load episodes from Jellyfin")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"episodes": episodes})
+}
+
 func parseSearchLimit(raw string) int {
 	if raw == "" {
 		return defaultSearchLimit

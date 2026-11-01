@@ -167,40 +167,47 @@ admin was looking for.
 That is not lost data - it is the wrong access pattern. Browse the tree instead
 of searching it flat.
 
-- [ ] Narrow the search to top-level items: `Movie,Series` only. Empty query
+- [x] Narrow the search to top-level items: `Movie,Series` only. Empty query
       still lists recently added films and series. Update the client tests.
-- [ ] Add `GET /api/admin/jellyfin/series/{id}/seasons`: id, name, season
+- [x] Add `GET /api/admin/jellyfin/series/{id}/seasons`: id, name, season
       number, poster flag, sorted by number. Include Specials (season 0).
-- [ ] Add `GET /api/admin/jellyfin/seasons/{id}/episodes`: id, name, episode
+- [x] Add `GET /api/admin/jellyfin/seasons/{id}/episodes`: id, name, episode
       number, overview, runtime, poster flag, sorted by number.
-- [ ] Add `BrowseSeasons` / `BrowseEpisodes` to the Jellyfin client. Map to the
+- [x] Add `BrowseSeasons` / `BrowseEpisodes` to the Jellyfin client. Map to the
       same picker row shape as `SearchItem`; do not disturb the existing public
       episode code.
-- [ ] Fallback: if a series returns no Season children, fetch its episodes
+- [x] Fallback: if a series returns no Season children, fetch its episodes
       recursively and show one "Episodes" group. The series itself stays
       shareable.
-- [ ] Series result row: poster, title, year, a disclosure chevron, and a
+- [x] Series result row: poster, title, year, a disclosure chevron, and a
       **Share series** button. Expanding it loads seasons lazily.
-- [ ] Season row: name ("Season 1", "Specials"), a disclosure chevron, and a
+- [x] Season row: name ("Season 1", "Specials"), a disclosure chevron, and a
       **Share season** button. Expanding it loads episodes lazily.
-- [ ] Episode row: clicking it selects that episode. No extra expand step.
-- [ ] Cache seasons and episodes per id for the life of the panel; the Refresh
+- [x] Episode row: clicking it selects that episode. No extra expand step.
+- [x] Cache seasons and episodes per id for the life of the panel; the Refresh
       button clears the cache and reloads the current search. Multiple series
       and seasons may be open at once.
-- [ ] Keep expansion state when the admin chooses an item and then presses
+- [x] Keep expansion state when the admin chooses an item and then presses
       **Change item**.
-- [ ] Loading and error states inside each expanded node, with a retry that only
+- [x] Loading and error states inside each expanded node, with a retry that only
       retries that node.
-- [ ] Accessibility: real buttons, `aria-expanded` on disclosure controls, no
+- [x] Accessibility: real buttons, `aria-expanded` on disclosure controls, no
       nested interactive elements, keyboard reachable.
-- [ ] Responsive: indent the tree on phones; keep the result list scrollable
+- [x] Responsive: indent the tree on phones; keep the result list scrollable
       rather than growing the page without bound.
-- [ ] Tests: client query/mapping for seasons and episodes, handler tests, and a
+- [x] Tests: client query/mapping for seasons and episodes, handler tests, and a
       live check against a multi-season series plus one with specials.
 
 Done when: searching a series shows it; expanding shows every season; expanding
 a season shows every episode; and sharing a series, a season, or an episode all
 work from the tree.
+
+Status: done. Search now returns only films and series. Series rows expand into
+seasons with Share season buttons; seasons expand into episodes that select on
+click. Seasons and episodes load lazily, cache per id, and a series with no
+Season objects falls back to a flat episode group. Verified against the live
+library: Mr. & Mrs. Smith returned 1 season and 8 episodes; Attack on Titan
+returned 4 seasons with 25, 12, 22, and 28 episodes.
 
 ### Step 6 — Selection, mass actions, and per-share actions
 
@@ -305,3 +312,6 @@ window, while live and never-expiring links stay.
   matches each item's own name, so a series title never matches its seasons or
   episodes. Added Step 5: a series-first, collapsible tree that browses seasons
   and episodes instead of searching for them.
+- Step 5 done: top-level-only search, season/episode browse endpoints, and a
+  lazy, cached tree with Share series / Share season / episode selection plus
+  a no-seasons fallback. Verified against a one-season and a four-season show.
