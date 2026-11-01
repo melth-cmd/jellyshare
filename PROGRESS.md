@@ -51,17 +51,22 @@ talks to the real Jellyfin library. Picking a real film or series works in dev.
 
 ### Step 0 — Fast dev loop
 
-- [ ] Remap the dev backend to host port `8098` (container port stays `8097`) so
+- [x] Remap the dev backend to host port `8098` (container port stays `8097`) so
       it can run beside production.
-- [ ] Make the Vite proxy target configurable, defaulting to
-      `http://localhost:8098`.
-- [ ] Add `scripts/sync-dev-db.sh`: dump `jfshare-db`, restore into
+- [x] Make the Vite proxy target configurable: it follows `JFSHARE_PORT`
+      (8097 inside the dev container), and `VITE_API_TARGET` overrides it when
+      Vite runs on the host.
+- [x] Add `scripts/sync-dev-db.sh`: dump `jfshare-db`, restore into
       `jfshare-db-dev` (drop and recreate the public schema first).
-- [ ] Add a `make dev-db-sync` target.
-- [ ] Confirm air picks up Go changes and Vite picks up Svelte changes.
+- [x] Add a `make dev-db-sync` target.
+- [x] Confirm air picks up Go changes and Vite picks up Svelte changes.
 
 Done when: editing a Go file and a Svelte file is reflected in the browser with
 no compose rebuild, and dev data matches production after a sync.
+
+Status: done. Dev backend is on `http://localhost:8098`, Vite on
+`http://localhost:5173`, and the sync script copies production data. Go changes
+rebuild via `air`; Svelte changes are served by Vite immediately.
 
 ### Step 1 — Backend: Jellyfin library search
 
@@ -155,3 +160,7 @@ existing public share page.
 
 - Detached repo from upstream, rebranded, removed plugin references.
 - Added agent instructions, spec, and this plan.
+- Step 0 done: dev stack on 8098, Vite proxy configurable, `make dev-db-sync`
+  copies production data. Fixed the dev image build (Node 20 + npm latest was
+  incompatible) and `air` building with VCS stamping inside the container.
+- Verified hot reload for Go and Svelte and synced the dev database.
