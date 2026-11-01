@@ -48,8 +48,13 @@ flow.
 
 ### Item selection
 
-- Search Jellyfin by title; show poster, title, type, and year.
-- Support movies, episodes, seasons, and series.
+- Search returns top-level films and series only, never a flat mix of episodes.
+- Each series row expands to its seasons; each season expands to its episodes.
+- Each level has its own share action: **Share series**, **Share season**, or
+  click an episode.
+- Seasons and episodes load lazily and are cached until Refresh; several series
+  or seasons may stay open at once.
+- If a series has no Season children, show its episodes as one group.
 - The selected item supplies `jellyfinItemId`; the backend fills the owning
   Jellyfin user automatically.
 - The backend needs read access to the Jellyfin library from the admin API.
