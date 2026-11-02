@@ -487,6 +487,12 @@ pass.
 - Steps 8 and 9 done: empty/error/disclosure copy polished, docs rewritten to
   match the built admin flow, and a scripted end-to-end pass covered movie,
   series, season, episode, password, play-limit, bulk, and cleanup paths.
+- CI security work for #4 is done: `go vet`, `govulncheck` (pinned v1.9.0), and
+  `npm audit --audit-level=high` now run in GitHub Actions on pushes, PRs, and a
+  weekly schedule; actions are pinned to SHAs and Dependabot watches Go, npm,
+  and actions. Upgraded the frontend from Svelte 4/Vite 5 to Svelte 5/Vite 7 and
+  hls.js 1.7; `npm ci` + production build pass in a clean Node 20 container and
+  the high/critical audit baseline is clean.
 - Backup work for #2 is done: `scripts/backup-db.sh` writes checked gzip dumps
   into gitignored `.backups/` and keeps five, `scripts/restore-db.sh` refuses
   production without `FORCE_PRODUCTION=1`, and a user systemd timer runs nightly

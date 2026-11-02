@@ -572,6 +572,13 @@ Content-Type: application/json
 - Node.js 20+ (the production image builds the frontend with `node:20`)
 - Docker and Docker Compose
 
+### Checks
+
+CI runs on every push and pull request, plus weekly for new vulnerabilities:
+`go vet`, `go build`, `go test`, `govulncheck ./...`, the frontend build, and
+`npm audit --audit-level=high`. Dependabot opens weekly updates for Go modules,
+npm packages, and GitHub Actions.
+
 ### Setup
 
 ```bash
