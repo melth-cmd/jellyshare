@@ -38,7 +38,15 @@
     timeStyle: 'short'
   });
 
+  // Recents are a local convenience, not server state. They survive a reload
+  // and are cleared by the admin, never by the backend.
+  const RECENT_KEY = 'jfshare:recent-items';
+  const LAST_KEY = 'jfshare:last-item';
+  const RECENT_LIMIT = 8;
+
   let selectedItem = null;
+  let recentItems = [];
+  let lastItem = null;
   let searchQuery = '';
   let results = [];
   let searching = false;
@@ -80,6 +88,7 @@
   let copyError = '';
 
   onMount(() => {
+    loadRecents();
     runSearch('');
     return () => {
       clearTimeout(searchTimer);
@@ -105,6 +114,71 @@
     episodesLoading = {};
     episodesError = {};
   }
+
+  function isStoredItem(item) {
+    return item && typeof item.id === 'string' && typeof item.name === 'string' && typeof item.type === 'string';
+  }
+
+  function readStored(key) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function writeStored(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      // Private mode or a full quota: recents are a convenience, not a requirement.
+    }
+  }
+
+  function loadRecents() {
+    const stored = readStored(RECENT_KEY);
+    if (Array.isArray(stored)) {
+      recentItems = stored.filter(isStoredItem).slice(0, RECENT_LIMIT);
+    }
+    const last = readStored(LAST_KEY);
+    if (isStoredItem(last)) lastItem = last;
+  }
+
+  function rememberChoice(item) {
+    lastItem = item;
+    writeStored(LAST_KEY, item);
+  }
+
+  function rememberShare(item) {
+    const next = [item, ...recentItems.filter((x) => x.id !== item.id)].slice(0, RECENT_LIMIT);
+    recentItems = next;
+    writeStored(RECENT_KEY, next);
+  }
+
+  function clearRecents() {
+    recentItems = [];
+    lastItem = null;
+    try {
+      localStorage.removeItem(RECENT_KEY);
+      localStorage.removeItem(LAST_KEY);
+    } catch (e) {
+      // Nothing to clear if storage is unavailable.
+    }
+  }
+
+  // The last chosen item leads the list even before it has been shared, so
+  // returning to Create picks up where the admin left off.
+  $: recentList = (() => {
+    const seen = new Set();
+    const list = [];
+    for (const item of [lastItem, ...recentItems]) {
+      if (!isStoredItem(item) || seen.has(item.id)) continue;
+      seen.add(item.id);
+      list.push(item);
+    }
+    return list.slice(0, RECENT_LIMIT);
+  })();
 
   async function fetchList(url) {
     const response = await fetch(url, { headers: { 'X-Backend-Key': apiKey } });
@@ -203,6 +277,7 @@
 
   function choose(item) {
     selectedItem = item;
+    rememberChoice(item);
     formError = '';
   }
 
@@ -325,6 +400,7 @@
       created = data;
       createdPassword = password;
       qrSvg = makeQr(data.publicUrl);
+      rememberShare(selectedItem);
       dispatch('created');
     } catch (e) {
       formError = e.message || 'Could not create the link.';
@@ -464,6 +540,33 @@
               autocomplete="off"
             />
           </label>
+
+          {#if !searchQuery.trim() && recentList.length > 0}
+            <div class="recent">
+              <div class="recent__head">
+                <h3 class="recent__title">Recent</h3>
+                <button class="recent__clear" type="button" on:click={clearRecents}>Clear</button>
+              </div>
+              <ul class="pick pick--recent">
+                {#each recentList as item (item.id)}
+                  <li>
+                    <button class="pick__row" type="button" on:click={() => choose(item)}>
+                      <span class="pick__poster">
+                        <PosterThumb {apiKey} itemId={item.id} alt="" maxWidth={160} />
+                      </span>
+                      <span class="pick__text">
+                        <span class="pick__title">
+                          {item.name}
+                          {#if lastItem?.id === item.id}<span class="recent__badge">Last</span>{/if}
+                        </span>
+                        <span class="pick__sub">{itemContext(item)}</span>
+                      </span>
+                    </button>
+                  </li>
+                {/each}
+              </ul>
+            </div>
+          {/if}
 
           <div class="results" aria-live="polite">
             {#if searching}
@@ -811,6 +914,52 @@
   .chip:active { transform: translateY(1px); }
 
   .search { display: grid; gap: var(--space-2xs); }
+
+  .recent { max-width: 46rem; margin-top: var(--space-md); }
+
+  .recent__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-2xs);
+  }
+
+  .recent__title {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-neutral);
+  }
+
+  .recent__clear {
+    padding: 0;
+    background: none;
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+    border: none;
+    border-bottom: var(--rule-hair) solid var(--color-rule);
+    cursor: pointer;
+  }
+
+  @media (hover: hover) {
+    .recent__clear:hover { color: var(--color-ink); border-bottom-color: var(--color-ink-2); }
+  }
+
+  .recent__badge {
+    margin-inline-start: var(--space-2xs);
+    padding: 0.05rem 0.35rem;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    border: var(--rule-hair) solid var(--color-rule);
+    border-radius: var(--radius-pill);
+  }
+
+  .pick--recent { max-height: none; }
 
   .results { max-width: 46rem; }
 

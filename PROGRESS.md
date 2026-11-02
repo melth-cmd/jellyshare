@@ -420,7 +420,41 @@ pass.
 - Revisit the items deliberately left out of v0.1.0 and promote whichever the
   family workflow actually needs.
 
-### 0.3.0 — viewer localization
+### 0.3.0 — links and picker polish
+
+**Readable share URLs** *(#29)*
+- New tokens are `<slug>-<12 hex>`; old random tokens keep working.
+- Done.
+
+**Thai subtitle default** *(#30)*
+- Default the public page to the first Thai track without overriding an
+  explicit choice.
+- Done.
+
+**Better search** *(#13)*
+- Add recently shared items and the last chosen item locally; keep the
+  series-first tree.
+- Done.
+
+**Deferred items review** *(#14)*
+- Quality/download editing was promoted and shipped; batch selection was
+  closed as not planned.
+- Done.
+
+**Backlog from use** *(#7)*
+- Real-use reports are filed as normal issues; the standing triage issue is
+  closed.
+
+### 0.4.0 — rename to Jellyshare
+
+**Full rename** *(#31)*
+- Rename the product, repo, module, image, container, env prefix, systemd
+  units, browser keys and docs to Jellyshare.
+- Decide compatibility for env vars, database names and browser state before
+  changing them.
+- Done when one name appears everywhere and an old share link still opens.
+
+### 0.5.0 — viewer localization
 
 **Thai for the public share page** *(#16)*
 - Translate only the viewer-facing `/s/{token}` experience and player chrome:
@@ -577,3 +611,21 @@ pass.
   the same slug, falling back to the stored title if the item is gone. Verified
   live for film, series, season, episode and duplicate, plus an old token still
   returning 200.
+- #13 done: the picker remembers the last chosen item and the last eight shared
+  items in `localStorage` (`jfshare:last-item`, `jfshare:recent-items`). When
+  the search box is empty, a Recent section shows them with a Last badge and a
+  Clear action; choosing one fills the form as usual. The series-first tree and
+  Jellyfin search are unchanged. Verified in jsdom: recents render, choosing
+  restores the item, and a successful create moves it to the top.
+- #14 done: reviewed `SPEC.md` against actual use. Quality/download editing was
+  promoted and shipped in #10; batch selection was closed as not planned in
+  #12. `SPEC.md` now documents the three admin tabs, Analytics, readable links,
+  restore/duplicate and the full edit fields, and the old "Out of scope" list is
+  replaced by a resolved-deferrals note.
+- #7 closed: no open real-use bugs remain, and the dev logs show normal
+  playback and admin traffic. Future reports are filed as normal issues rather
+  than tracked in a standing triage issue.
+- Opened #31 for the 0.4.0 rename to Jellyshare: product strings, repo, Go
+  module, image, container, env prefix, systemd units, browser keys and docs,
+  with the compatibility decisions listed. Moved #16 Thai localization to the
+  new 0.5.0 milestone so the rename lands first.
