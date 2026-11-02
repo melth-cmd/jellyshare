@@ -22,7 +22,7 @@ COPY web/ ./
 RUN npm run build
 
 # Stage 2: Build backend
-FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS backend-builder
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS backend-builder
 
 # Set by buildx for each image it builds; a plain docker build fills them in
 # for the machine it runs on.

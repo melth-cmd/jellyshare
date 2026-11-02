@@ -1,5 +1,5 @@
 # Development container with Go, Node, and hot reload
-FROM golang:1.23-bookworm
+FROM golang:1.27-bookworm
 
 # Install Node.js 20
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \

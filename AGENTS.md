@@ -60,7 +60,7 @@ changes run the frontend build. Mention in your summary which checks you ran.
 
 ## Conventions
 
-- Go 1.23, standard library plus chi, sqlx, and PostgreSQL. Keep handlers thin:
+- Go 1.27, standard library plus chi, sqlx, and PostgreSQL. Keep handlers thin:
   decode and validate, call the database or Jellyfin, write JSON.
 - Use `writeError(w, status, message)` for error responses.
 - The JSON field names in `internal/models` are a public API for the admin UI and
