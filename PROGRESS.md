@@ -643,3 +643,14 @@ pass.
   keys and docs now use Jellyshare. The GitHub repo is `melth-cmd/jellyshare`
   and the image path is `ghcr.io/melth-cmd/jellyshare`. Browser state migrates
   from the old `jfshare_*` keys on first load. Prepared `v0.4.0`.
+- **v0.4.0 released and deployed** (`7b9b3d5` + tag): the full rename to
+  Jellyshare. Repo `melth-cmd/jellyshare`, module
+  `github.com/melth-cmd/jellyshare`, image `ghcr.io/melth-cmd/jellyshare:0.4.0`
+  (digest `sha256:4e2da42faa0a7cac7b5c6ba4c271b8434904b413e7367e16422f3c13c69732d5`).
+  Production database and role renamed in place to `jellyshare`, the data volume
+  copied to `jellyshare_data`, containers renamed to `jellyshare` /
+  `jellyshare-db`, and the systemd timer replaced with
+  `jellyshare-backup.timer`. The local checkout moved to
+  `%h/jellyshare`; the dev stack was recreated and synced from
+  production. Health, admin, analytics, the external URL and an old 24-hex share
+  token all return 200. The 0.4.0 milestone is closed.
