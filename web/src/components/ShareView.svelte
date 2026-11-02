@@ -388,6 +388,9 @@
 
   let selectedAudioIndex = null;
   let selectedSubtitleIndex = null;
+  // Once the viewer touches the subtitle menu - including choosing None - the
+  // Thai default must never come back and overrule them.
+  let subtitleTouched = false;
 
   // Jellyfin's own titles name codecs ("Deutsch - PGSSUB"), which mean nothing to
   // a viewer. A track is named by its language and, for audio, its layout; only
@@ -421,6 +424,24 @@
     selectedAudioIndex = defaultAudio.index;
   }
   $: subtitleLabels = labelTracks(shareInfo.subtitleTracks, 'Subtitle');
+
+  // The family watches in Thai, so the first Thai track is the sensible default.
+  // Jellyfin's language tag is the reliable signal; the display title covers
+  // files tagged with the wrong language but named "Thai" or "ไทย".
+  function isThaiTrack(t) {
+    const lang = String(t.language || '').toLowerCase();
+    if (lang === 'th' || lang === 'tha' || lang.startsWith('th-')) return true;
+    const title = String(t.displayTitle || '');
+    return /\bthai\b/i.test(title) || title.includes('ไทย');
+  }
+
+  // Only before the viewer has chosen: the first Thai track in Jellyfin's order
+  // wins, and no Thai track leaves the menu on None.
+  $: if (!subtitleTouched && selectedSubtitleIndex == null && shareInfo.subtitleTracks?.length) {
+    const thai = shareInfo.subtitleTracks.find(isThaiTrack);
+    if (thai) selectedSubtitleIndex = thai.index;
+  }
+
   $: hasTracks = (shareInfo.audioTracks?.length > 1) || (shareInfo.subtitleTracks?.length > 0);
 
   // Report what this browser can actually decode so the server can stream-copy a
@@ -1381,7 +1402,8 @@
               {#if shareInfo.subtitleTracks && shareInfo.subtitleTracks.length > 0}
                 <div class="field">
                   <label for="subtitle-select">Subtitles</label>
-                  <select id="subtitle-select" bind:value={selectedSubtitleIndex}>
+                  <select id="subtitle-select" bind:value={selectedSubtitleIndex}
+                          on:change={() => (subtitleTouched = true)}>
                     <option value={null}>None</option>
                     {#each shareInfo.subtitleTracks as track}
                       <option value={track.index}>{subtitleLabels.get(track.index)}</option>
