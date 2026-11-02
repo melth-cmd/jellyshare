@@ -167,4 +167,13 @@ export default {
   'player.revoked': 'แอดมินปิดลิงก์นี้แล้ว',
   'player.expired': 'ลิงก์นี้หมดอายุแล้ว',
   'player.terminated': 'การรับชมนี้สิ้นสุดลง',
+
+  'cast.airplayHint': 'หากต้องการรับชมบนทีวี ให้เริ่มเล่นแล้วเลือก AirPlay ในเครื่องเล่น',
+  'cast.chromeHint': 'หากต้องการรับชมบนทีวี ให้เปิดลิงก์นี้ใน Chrome หรือ Edge',
+  'cast.sharedMedia': 'สื่อที่แชร์',
+  'cast.tvUnreachable': 'ไม่สามารถเข้าถึงทีวีได้',
+  'cast.tvUnreachableNext': 'ตรวจสอบว่าทีวีเปิดอยู่และอยู่ใน Wi-Fi เดียวกับอุปกรณ์นี้ แล้วลองอีกครั้ง',
+  'cast.tvCantPlay': 'ทีวีไม่สามารถเล่นวิดีโอได้',
+  'cast.tryAgainOrWatch': 'ลองอีกครั้ง หรือรับชมที่นี่แทน',
+  'cast.failed': 'การแคสต์ไม่สำเร็จ',
 };

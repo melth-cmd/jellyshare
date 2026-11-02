@@ -123,7 +123,7 @@ These come from Jellyfin or are not language:
 - [x] Batch 2: password gate and link terms.
 - [x] Batch 3: playback controls and downloads.
 - [x] Batch 4: player chrome.
-- [ ] Batch 5: cast messages and language names.
+- [x] Batch 5: cast messages and language names.
 - [ ] Batch 6: metadata labels and formatting.
 
 ## Batch workflow

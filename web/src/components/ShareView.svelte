@@ -263,7 +263,7 @@
     ? $t('terms.countingNote') + (shareInfo.allowDownload ? $t('terms.countingDownload') : '')
     : '';
 
-  $: tvNote = tvHint();
+  $: tvNote = tvHint($t);
 
   // ---- Refusals, in the viewer's words ----
   // The server's error strings are written for logs. The viewer needs what
@@ -395,7 +395,7 @@
   const LAYOUTS = { 1: 'track.mono', 2: 'track.stereo', 6: '5.1', 8: '7.1' };
 
   function plainLabel(translate, t, fallback) {
-    const name = languageName(toBcp47(t.language)) || t.displayTitle || `${fallback} ${t.index}`;
+    const name = languageName(toBcp47(t.language), $locale) || t.displayTitle || `${fallback} ${t.index}`;
     const extra = [];
     if (t.channels) {
       const layout = LAYOUTS[t.channels];
@@ -624,7 +624,9 @@
         subtitle,
         posterUrl: shareInfo.posterUrl,
         durationSeconds,
-        startTime
+        startTime,
+        translate: $t,
+        locale: $locale
       });
       castSessionId = data.sessionId;
       castingEpisodeId = episodeId;
@@ -632,7 +634,7 @@
       startCastHeartbeat(data.sessionId);
     } catch (e) {
       // A dismissed picker is not a failure.
-      const said = describeCastError(e);
+      const said = describeCastError(e, $t);
       playError = !said ? ''
         : !playCharged || !playLimit ? `${said.cause} ${said.next}`
         : playsUsedUp ? `${said.cause} That was this link’s last play, so it can’t be started again. Ask whoever shared it for another.`
@@ -678,7 +680,7 @@
     try {
       await ensureCastSession();
     } catch (e) {
-      const said = describeCastError(e);
+      const said = describeCastError(e, $t);
       playError = said ? `${said.cause} ${said.next}` : '';
     } finally {
       casting = false;

@@ -58,12 +58,12 @@ export function isCastPossible() {
  * button appears once the SDK is up. Safari reaches a TV through AirPlay in its
  * own player controls; anything else has no route from here.
  */
-export function tvHint() {
+export function tvHint(translate) {
   if (typeof window === 'undefined' || window.chrome) return null;
   if (window.WebKitPlaybackTargetAvailabilityEvent) {
-    return 'To watch on a TV, start playing and choose AirPlay in the player.';
+    return translate('cast.airplayHint');
   }
-  return 'To watch on a TV, open this link in Chrome or Edge.';
+  return translate('cast.chromeHint');
 }
 
 /**
@@ -140,7 +140,7 @@ export async function ensureCastSession() {
  * URL comes from the server's configured public base, which is the address the
  * receiver can reach, while the page may have been opened on a different host.
  */
-export async function loadOnCast({ url, title, subtitle, posterUrl, subtitleUrl, subtitleLanguage, durationSeconds, startTime }) {
+export async function loadOnCast({ url, title, subtitle, posterUrl, subtitleUrl, subtitleLanguage, durationSeconds, startTime, translate, locale }) {
   const session = await ensureCastSession();
 
   const abs = (u) => (u ? new URL(u, url).href : undefined);
@@ -153,7 +153,7 @@ export async function loadOnCast({ url, title, subtitle, posterUrl, subtitleUrl,
   if (durationSeconds) info.duration = durationSeconds;
 
   const meta = new chrome.cast.media.GenericMediaMetadata();
-  meta.title = title || 'Shared media';
+  meta.title = title || translate('cast.sharedMedia');
   if (subtitle) meta.subtitle = subtitle;
   if (posterUrl) meta.images = [new chrome.cast.Image(abs(posterUrl))];
   info.metadata = meta;
@@ -167,7 +167,7 @@ export async function loadOnCast({ url, title, subtitle, posterUrl, subtitleUrl,
     // it, and it wants a BCP-47 tag. Jellyfin reports ISO 639-2 ("deu"), which
     // the browser canonicalises for us ("de") - no mapping table needed.
     track.language = toBcp47(subtitleLanguage);
-    track.name = languageName(track.language) || 'Subtitles';
+    track.name = languageName(track.language, locale) || translate('track.subtitles');
     info.tracks = [track];
   }
 
@@ -300,11 +300,11 @@ export function toBcp47(code) {
 
 // Gives the receiver something readable in its track menu - "German" rather than
 // a bare "Subtitles" - falling back when the language is unknown.
-export function languageName(tag) {
+export function languageName(tag, locale = 'en') {
   if (!tag || tag === 'und') return null;
   try {
-    // English, like the page and its labels around the name.
-    return new Intl.DisplayNames(['en'], { type: 'language' }).of(tag);
+    // The page's language, so a Thai viewer sees Thai track names.
+    return new Intl.DisplayNames([locale], { type: 'language' }).of(tag);
   } catch (e) {
     return null;
   }
@@ -321,7 +321,7 @@ export function stopCast() {
  * is nothing left to try with. Returns null when the viewer simply dismissed the
  * picker, which is not a failure worth showing.
  */
-export function describeCastError(e) {
+export function describeCastError(e, translate) {
   const code = typeof e === 'string' ? e : (e?.code || e?.message);
   if (code === 'cancel' || code === chrome?.cast?.ErrorCode?.CANCEL) return null;
 
@@ -334,11 +334,11 @@ export function describeCastError(e) {
   switch (code) {
     case 'timeout':
     case 'receiver_unavailable':
-      return { cause: 'The TV couldn’t be reached.', next: 'Check it’s on and on the same Wi-Fi as this device, then try again.' };
+      return { cause: translate('cast.tvUnreachable'), next: translate('cast.tvUnreachableNext') };
     case 'session_error':
     case 'load_failed':
-      return { cause: 'The TV couldn’t play the video.', next: 'Try again, or watch here instead.' };
+      return { cause: translate('cast.tvCantPlay'), next: translate('cast.tryAgainOrWatch') };
     default:
-      return { cause: 'Casting didn’t work.', next: 'Try again, or watch here instead.' };
+      return { cause: translate('cast.failed'), next: translate('cast.tryAgainOrWatch') };
   }
 }

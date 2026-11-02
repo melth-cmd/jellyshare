@@ -174,4 +174,13 @@ export default {
   'player.revoked': 'Whoever shared this link switched it off.',
   'player.expired': 'This link has expired.',
   'player.terminated': 'This viewing was ended.',
+
+  'cast.airplayHint': 'To watch on a TV, start playing and choose AirPlay in the player.',
+  'cast.chromeHint': 'To watch on a TV, open this link in Chrome or Edge.',
+  'cast.sharedMedia': 'Shared media',
+  'cast.tvUnreachable': 'The TV couldn’t be reached.',
+  'cast.tvUnreachableNext': 'Check it’s on and on the same Wi-Fi as this device, then try again.',
+  'cast.tvCantPlay': 'The TV couldn’t play the video.',
+  'cast.tryAgainOrWatch': 'Try again, or watch here instead.',
+  'cast.failed': 'Casting didn’t work.',
 };
