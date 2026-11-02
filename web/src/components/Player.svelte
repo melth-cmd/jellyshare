@@ -3,6 +3,7 @@
   import Hls from 'hls.js';
   import PlayIcon from './PlayIcon.svelte';
   import { fullscreenElement, enterFullscreen, exitFullscreen } from '../fullscreen.js';
+  import { t } from '../i18n/index.js';
 
   export let playbackData;
   export let title;
@@ -215,7 +216,7 @@
 
   function initPlayer() {
     if (!playbackData?.playbackUrl) {
-      fail('The stream didn’t arrive.', 'restart');
+      fail($t('player.streamMissing'), 'restart');
       return;
     }
 
@@ -253,7 +254,7 @@
 
         switch (data.type) {
           case Hls.ErrorTypes.NETWORK_ERROR:
-            recovering = 'Connection interrupted, reconnecting';
+            recovering = $t('player.reconnecting');
             hls.startLoad();
             break;
 
@@ -270,22 +271,22 @@
             recoveryAttempts++;
 
             if (recoveryAttempts === 1) {
-              recovering = 'Recovering the stream';
+              recovering = $t('player.recovering');
               hls.recoverMediaError();
             } else if (recoveryAttempts === 2) {
-              recovering = 'Recovering the stream';
+              recovering = $t('player.recovering');
               hls.swapAudioCodec();
               hls.recoverMediaError();
             } else {
               recovering = null;
-              fail('This browser couldn’t play the stream.', 'browser');
+              fail($t('player.browserCantPlay'), 'browser');
               cleanup();
             }
             break;
 
           default:
             recovering = null;
-            fail('The stream stopped and couldn’t be picked up again.', 'restart');
+            fail($t('player.streamStopped'), 'restart');
             cleanup();
             break;
         }
@@ -303,11 +304,11 @@
       // had none, so a revoked share or a timed-out session left a blank player
       // with no message. Safari is routed here now, so it needs one.
       videoElement.addEventListener('error', () => {
-        fail('The stream stopped and couldn’t be picked up again.', 'restart');
+        fail($t('player.streamStopped'), 'restart');
         cleanup();
       });
     } else {
-      fail('This browser can’t play this stream.', 'browser');
+      fail($t('player.browserCantPlayThis'), 'browser');
     }
   }
 
@@ -319,18 +320,20 @@
   // The next step after a failure. On the link's last play there is none to
   // offer here: the share page has nothing left to start.
   $: nextStep = !errorFix ? ''
-    : playsLeft === 0 ? 'That was this link’s last play, so it can’t be started again. Ask whoever shared it for another.'
-    : (errorFix === 'browser' ? 'Open the link in Chrome, Edge or Safari, or on another device.' : 'Go back and start it again.')
-      + (playsLeft === null ? '' : ' The play was counted when it started, so that uses another.');
+    : playsLeft === 0 ? $t('player.lastPlay')
+    : (errorFix === 'browser' ? $t('player.tryAnotherBrowser') : $t('player.goBack'))
+      + (playsLeft === null ? '' : $t('player.playCounted'));
 
   // What the server's reasons for ending a session mean to the viewer, and
   // whether starting again is still possible. None of them is about this
   // browser, so none suggests trying another.
-  const ENDED = {
-    revoked: ['Whoever shared this link switched it off.', null],
-    expired: ['This link has expired.', null],
-    terminated: ['This viewing was ended.', 'restart']
-  };
+  function endedMessage(status) {
+    switch (status) {
+      case 'revoked': return [$t('player.revoked'), null];
+      case 'expired': return [$t('player.expired'), null];
+      default: return [$t('player.terminated'), 'restart'];
+    }
+  }
 
   function startHeartbeat() {
     heartbeatInterval = setInterval(async () => {
@@ -347,7 +350,7 @@
         if (response.ok) {
           const data = await response.json();
           if (data.status !== 'ok') {
-            fail(...(ENDED[data.status] || ENDED.terminated));
+            fail(...endedMessage(data.status));
             cleanup();
           }
         }
@@ -508,7 +511,7 @@
        The fullscreen button only appears where it replaces the video's own. -->
   <header class="player__bar">
     <!-- Back sits where Back is looked for: first, top left. -->
-    <button class="glyph" on:click={handleClose} title="Back (Esc)" aria-label="Back to the share">
+    <button class="glyph" on:click={handleClose} title={$t('player.backTitle')} aria-label={$t('player.back')}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M19 12H5M11 18l-6-6 6-6"/>
       </svg>
@@ -517,8 +520,8 @@
     <div class="player__tools">
       {#if ownFullscreenControl}
         <button class="glyph" on:click={toggleFullscreen}
-                title={isFullscreen ? 'Exit fullscreen (F)' : 'Fullscreen (F)'}
-                aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
+                title={isFullscreen ? $t('player.exitFullscreenTitle') : $t('player.fullscreenTitle')}
+                aria-label={isFullscreen ? $t('player.exitFullscreen') : $t('player.fullscreen')}>
           {#if isFullscreen}
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M16 21v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/>
@@ -536,12 +539,12 @@
   <div class="player__stage">
     {#if error}
       <div class="player__error">
-        <p class="player__error-head">Playback stopped</p>
+        <p class="player__error-head">{$t('player.playbackStopped')}</p>
         <p class="player__error-body">{error}</p>
         {#if nextStep}
           <p class="player__error-note">{nextStep}</p>
         {/if}
-        <button class="btn-back" on:click={handleClose}>Back to the share</button>
+        <button class="btn-back" on:click={handleClose}>{$t('player.backToShare')}</button>
       </div>
     {:else if recovering}
       <p class="player__recovering">{recovering}…</p>
@@ -578,13 +581,13 @@
 
     {#if showNextUp}
       <!-- Sits in the corner the native controls leave free, above their bar. -->
-      <aside class="nextup" aria-label="Next episode" aria-live="polite">
-        <button class="nextup__x" on:click={cancelNextUp} aria-label="Don’t play the next episode">
+      <aside class="nextup" aria-label={$t('player.nextEpisode')} aria-live="polite">
+        <button class="nextup__x" on:click={cancelNextUp} aria-label={$t('player.dontPlayNext')}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
             <path d="M18 6L6 18M6 6l12 12"/>
           </svg>
         </button>
-        <p class="nextup__eyebrow">Next episode</p>
+        <p class="nextup__eyebrow">{$t('player.nextEpisode')}</p>
         <p class="nextup__title">
           <span class="nextup__no">{nextUp.label}</span>
           <span class="nextup__name">{nextUp.name}</span>
@@ -593,10 +596,10 @@
           <button class="nextup__play" on:click={playNext}>
             <span class="nextup__fill" style="transform: scaleX({nextUpFill})" aria-hidden="true"></span>
             <PlayIcon />
-            <span>Play now</span>
+            <span>{$t('player.playNow')}</span>
             <span class="nextup__count">{countdown}s</span>
           </button>
-          <button class="nextup__cancel" on:click={cancelNextUp}>Cancel</button>
+          <button class="nextup__cancel" on:click={cancelNextUp}>{$t('player.cancel')}</button>
         </div>
       </aside>
     {/if}

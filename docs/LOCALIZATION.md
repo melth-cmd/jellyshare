@@ -122,7 +122,7 @@ These come from Jellyfin or are not language:
 - [x] Batch 1: shell, errors, gone-link page, footer, pill label.
 - [x] Batch 2: password gate and link terms.
 - [x] Batch 3: playback controls and downloads.
-- [ ] Batch 4: player chrome.
+- [x] Batch 4: player chrome.
 - [ ] Batch 5: cast messages and language names.
 - [ ] Batch 6: metadata labels and formatting.
 
