@@ -1,7 +1,7 @@
 <script>
   import BrandMark from './BrandMark.svelte';
   import LocalePill from './LocalePill.svelte';
-  import { t } from '../i18n/index.js';
+  import { dateTimeFormatter, localeTag, t } from '../i18n/index.js';
 
   export let error;
 
@@ -38,19 +38,17 @@
     };
   }
 
-  // Same day-month order and 24-hour clock as the share page. The locale and
-  // calendar are localized in the formatting batch.
-  const when = new Intl.DateTimeFormat('en-GB', {
-    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
-  });
+  // Same day-month order and 24-hour clock as the share page, in the page's
+  // language. Thai uses Thai month names with the Gregorian year.
+  $: when = dateTimeFormatter($localeTag);
 
   // A link that ran out says which one, why and since when - the server knows,
   // so the page does not make the viewer guess between causes.
-  function goneMessage(gone, translate) {
+  function goneMessage(gone, translate, formatter) {
     const at = new Date(gone.endedAt);
     const date = Number.isNaN(at.getTime())
       ? ''
-      : translate('error.gone.onDate', { date: when.format(at) });
+      : translate('error.gone.onDate', { date: formatter.format(at) });
     const name = [gone.seriesName, gone.title].filter(Boolean).join(', ');
     const link = name ? translate('error.gone.linkTo', { name }) : translate('error.gone.thisLink');
     if (gone.reason === 'revoked') {
@@ -71,7 +69,7 @@
   }
 
   $: errorInfo = error?.gone
-    ? goneMessage(error.gone, $t)
+    ? goneMessage(error.gone, $t, when)
     : messages($t)[error?.status] || messages($t).default;
 </script>
 

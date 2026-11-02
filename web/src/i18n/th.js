@@ -176,4 +176,16 @@ export default {
   'cast.tvCantPlay': 'ทีวีไม่สามารถเล่นวิดีโอได้',
   'cast.tryAgainOrWatch': 'ลองอีกครั้ง หรือรับชมที่นี่แทน',
   'cast.failed': 'การแคสต์ไม่สำเร็จ',
+
+  'meta.direction': 'กำกับโดย',
+  'meta.studio': 'สตูดิโอ',
+  'meta.starring': 'นักแสดงนำ',
+  'meta.showFewer': 'แสดงน้อยลง',
+  'meta.showAll': 'แสดงทั้งหมด {count}',
+  'meta.audience': 'ผู้ชม {rating}/10',
+  'meta.critics': 'นักวิจารณ์ {rating}%',
+
+  'format.durationHours': '{hours} ชม. {minutes} น.',
+  'format.durationMinutes': '{minutes} น.',
+  'format.clockOf': '{position} จาก {total}',
 };

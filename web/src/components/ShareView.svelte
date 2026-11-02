@@ -13,7 +13,7 @@
   import { MAIN, emptyProgress, loadProgress, noteProgress, resumePosition, seriesResumeTarget,
            watchedFraction, isWatched, formatClock } from '../progress.js';
   import { fullscreenElement, exitFullscreen } from '../fullscreen.js';
-  import { locale, t } from '../i18n/index.js';
+  import { dateTimeFormatter, locale, localeTag, t } from '../i18n/index.js';
 
   export let shareInfo;
   export let token;
@@ -222,7 +222,7 @@
     : $t('terms.noExpiry');
   // The headline is the one place the terms are stated, so the exact moment
   // rides along under it rather than in a second and third spot on the page.
-  $: expiryExact = shareInfo.expiresAt ? formatAbsolute(shareInfo.expiresAt) : '';
+  $: expiryExact = shareInfo.expiresAt ? formatAbsolute(shareInfo.expiresAt, absoluteTime) : '';
   // English capitalises the headline when it opens the line; Thai has no case.
   const capitalised = (text, value) => value === 'th' ? text : text.charAt(0).toUpperCase() + text.slice(1);
   $: expiryHeadDisplay = playsHead ? expiryHead : capitalised(expiryHead, $locale);
@@ -302,12 +302,12 @@
     return translate('refusal.generic', { what, free });
   }
 
-  function formatDuration(seconds) {
+  function formatDuration(seconds, translate) {
     if (!seconds) return '';
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
+    if (hours > 0) return translate('format.durationHours', { hours, minutes });
+    return translate('format.durationMinutes', { minutes });
   }
 
   // "in 6 days" while there is time to spare; under two days the hours count.
@@ -1062,37 +1062,32 @@
     imageLoaded = true;
   }
 
-  // In English, like the rest of the page, but in day-month order with a 24-hour
-  // clock and the zone named, which reads unambiguously wherever the viewer is.
-  const absoluteTime = new Intl.DateTimeFormat('en-GB', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZoneName: 'short'
-  });
+  // Day-month order with a 24-hour clock and the zone named, in the page's
+  // language. Thai uses Thai month names with the Gregorian year.
+  $: absoluteTime = dateTimeFormatter($localeTag);
 
   // "1:00 of 2:00": a resume point means little without the length it is in.
-  function clockOf(position, total) {
-    return total > 0 ? `${formatClock(position)} of ${formatClock(total)}` : formatClock(position);
+  function clockOf(position, total, translate) {
+    return total > 0
+      ? translate('format.clockOf', { position: formatClock(position), total: formatClock(total) })
+      : formatClock(position);
   }
 
   // "in 6 days" answers "is this still worth opening"; the exact local moment
   // answers "when do I lose it". The page shows both, in different places.
-  function formatAbsolute(dateStr) {
+  function formatAbsolute(dateStr, formatter) {
     const d = new Date(dateStr);
-    return Number.isNaN(d.getTime()) ? '' : absoluteTime.format(d);
+    return Number.isNaN(d.getTime()) ? '' : formatter.format(d);
   }
 
   // ---- Presentation: the fold's caption is a list of specifics, not badges. ----
   $: metaBits = [
     shareInfo.year,
-    shareInfo.runtimeSeconds ? formatDuration(shareInfo.runtimeSeconds) : null,
+    shareInfo.runtimeSeconds ? formatDuration(shareInfo.runtimeSeconds, $t) : null,
     shareInfo.officialRating,
     shareInfo.videoQuality?.resolution,
-    shareInfo.communityRating > 0 ? `Audience ${formatRating(shareInfo.communityRating)}/10` : null,
-    shareInfo.criticRating > 0 ? `Critics ${shareInfo.criticRating}%` : null
+    shareInfo.communityRating > 0 ? $t('meta.audience', { rating: formatRating(shareInfo.communityRating) }) : null,
+    shareInfo.criticRating > 0 ? $t('meta.critics', { rating: shareInfo.criticRating }) : null
   ].filter(Boolean);
 
   // Long titles step down a size rung rather than crowding themselves.
@@ -1265,7 +1260,7 @@
                         <span>{seriesPlayLabel}</span>
                       </span>
                       {#if resumedMidway}
-                        <span class="btn__aside">{clockOf(seriesResume.position, seriesResume.episode.runtimeSeconds)}</span>
+                        <span class="btn__aside">{clockOf(seriesResume.position, seriesResume.episode.runtimeSeconds, $t)}</span>
                       {/if}
                     {/if}
                   </button>
@@ -1338,7 +1333,7 @@
                       <span>{$t(resumedMidway ? 'play.resume' : 'play.play')}</span>
                     </span>
                     {#if resumedMidway}
-                      <span class="btn__aside">{clockOf(movieResumeAt, shareInfo.runtimeSeconds)}</span>
+                      <span class="btn__aside">{clockOf(movieResumeAt, shareInfo.runtimeSeconds, $t)}</span>
                     {/if}
                   {/if}
                 </button>
@@ -1487,7 +1482,7 @@
                         </span>
                         <span class="ep__end">
                           {#if seen >= 1}<span class="ep__watched"><CheckIcon title={$t('play.watched')} /></span>{/if}
-                          {#if episode.runtimeSeconds}<span class="ep__len">{formatDuration(episode.runtimeSeconds)}</span>{/if}
+                          {#if episode.runtimeSeconds}<span class="ep__len">{formatDuration(episode.runtimeSeconds, $t)}</span>{/if}
                         </span>
                       </div>
                     {:else}
@@ -1514,7 +1509,7 @@
                           <span class="ep__watched"><CheckIcon title={$t('play.watched')} /></span>
                         {/if}
                         {#if episode.runtimeSeconds}
-                          <span class="ep__len">{formatDuration(episode.runtimeSeconds)}</span>
+                          <span class="ep__len">{formatDuration(episode.runtimeSeconds, $t)}</span>
                         {/if}
                         {#if starting === episode.id}
                           <span class="meter meter--dot" aria-hidden="true"></span>
@@ -1576,19 +1571,19 @@
         <dl>
           {#if shareInfo.directors && shareInfo.directors.length > 0}
             <div>
-              <dt>Direction</dt>
+              <dt>{$t('meta.direction')}</dt>
               <dd>{shareInfo.directors.join(', ')}</dd>
             </div>
           {/if}
           {#if shareInfo.studios && shareInfo.studios.length > 0}
             <div>
-              <dt>Studio</dt>
+              <dt>{$t('meta.studio')}</dt>
               <dd>{shareInfo.studios[0]}</dd>
             </div>
           {/if}
           {#if shareInfo.actors && shareInfo.actors.length > 0}
             <div>
-              <dt>Starring</dt>
+              <dt>{$t('meta.starring')}</dt>
               <dd>
                 <ul class="cast">
                   {#each (showFullCast ? shareInfo.actors : shareInfo.actors.slice(0, 6)) as actor}
@@ -1600,7 +1595,7 @@
                 </ul>
                 {#if shareInfo.actors.length > 6}
                   <button class="link" on:click={() => (showFullCast = !showFullCast)}>
-                    {showFullCast ? 'Show fewer' : `Show all ${shareInfo.actors.length}`}
+                    {showFullCast ? $t('meta.showFewer') : $t('meta.showAll', { count: shareInfo.actors.length })}
                   </button>
                 {/if}
               </dd>

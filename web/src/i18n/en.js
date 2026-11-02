@@ -183,4 +183,16 @@ export default {
   'cast.tvCantPlay': 'The TV couldn’t play the video.',
   'cast.tryAgainOrWatch': 'Try again, or watch here instead.',
   'cast.failed': 'Casting didn’t work.',
+
+  'meta.direction': 'Direction',
+  'meta.studio': 'Studio',
+  'meta.starring': 'Starring',
+  'meta.showFewer': 'Show fewer',
+  'meta.showAll': 'Show all {count}',
+  'meta.audience': 'Audience {rating}/10',
+  'meta.critics': 'Critics {rating}%',
+
+  'format.durationHours': '{hours}h {minutes}m',
+  'format.durationMinutes': '{minutes}m',
+  'format.clockOf': '{position} of {total}',
 };

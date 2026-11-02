@@ -68,3 +68,17 @@ export const t = derived(locale, ($locale) => (key, params) => translate($locale
 // The tag for Intl formatters. Thai uses Thai month names with the Gregorian
 // calendar, as decided for the share page.
 export const localeTag = derived(locale, ($locale) => ($locale === 'th' ? 'th-TH' : 'en-GB'));
+
+// The share page and the error page use the same date shape: Thai month names
+// with the Gregorian calendar, or the English day-month order.
+export function dateTimeFormatter(tag) {
+  return new Intl.DateTimeFormat(tag, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short',
+    calendar: 'gregory'
+  });
+}
