@@ -492,7 +492,9 @@ pass.
   weekly schedule; actions are pinned to SHAs and Dependabot watches Go, npm,
   and actions. Upgraded the frontend from Svelte 4/Vite 5 to Svelte 5/Vite 7 and
   hls.js 1.7; `npm ci` + production build pass in a clean Node 20 container and
-  the high/critical audit baseline is clean.
+  the high/critical audit baseline is clean. CI also exposed Go 1.23 stdlib
+  findings, so `go.mod` and both Dockerfiles now use Go 1.27; local
+  `govulncheck` is clean and the Build workflow is green.
 - Backup work for #2 is done: `scripts/backup-db.sh` writes checked gzip dumps
   into gitignored `.backups/` and keeps five, `scripts/restore-db.sh` refuses
   production without `FORCE_PRODUCTION=1`, and a user systemd timer runs nightly
