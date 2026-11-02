@@ -6,12 +6,10 @@
 </p>
 
 > **A note on AI:** Jellyshare is developed by a human with AI assistance
-> (mostly Claude Code) helping write, refactor and review code. It's not "vibe
-> coded" or auto-generated: every change is reviewed, tested against a live
-> Jellyfin and shipped intentionally. That said, I'm all in on AI as a
-> development tool. It massively speeds up the work and lets a solo developer
-> ship features and fixes at a pace that wouldn't be possible otherwise. I'm
-> sharing this openly so you know what's behind the project.
+> (mostly DeepSeek Flash) helping write, refactor and review code. I'm all in on
+> AI as a development tool. It massively speeds up the work and lets a solo
+> developer ship features and fixes at a pace that wouldn't be possible
+> otherwise. I'm sharing this openly so you know what's behind the project.
 
 A secure, self-hosted way to hand someone a link to your media without handing
 them your Jellyfin server. The link carries its own terms: how long it lasts,
@@ -150,7 +148,7 @@ POSTGRES_PASSWORD=your-secure-db-password
 ### 3. Start the Server
 
 The compose file pins the release image tag. The GHCR package is private, so
-authenticate once with a token that can read packages, then pull:
+pulling it needs a token with `read:packages` and access to the package:
 
 ```bash
 gh auth refresh -s read:packages
@@ -160,8 +158,8 @@ docker compose pull jellyshare
 docker compose up -d
 ```
 
-If this host cannot authenticate to GHCR, build the same tag locally from the
-checked-out release instead:
+If you do not have access to the private package, build the same tag locally
+from the checkout instead:
 
 ```bash
 docker build -t ghcr.io/melth-cmd/jellyshare:0.5.0 .
