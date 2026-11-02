@@ -487,6 +487,9 @@ pass.
 - Steps 8 and 9 done: empty/error/disclosure copy polished, docs rewritten to
   match the built admin flow, and a scripted end-to-end pass covered movie,
   series, season, episode, password, play-limit, bulk, and cleanup paths.
+- **v0.1.1 released** (`779b8d6` + tag) with the deployment checklist, startup
+  warnings, Go 1.27, frontend Svelte 5/Vite 7, CI scans, dependency updates,
+  backups, and the pinned `0.1.1` image. Release workflow and image build passed.
 - Deployment checklist #5 is done: `docs/DEPLOYMENT.md` covers TLS/proxy, port
   exposure, secret generation, GHCR auth, verification headers, upgrades and
   rollback, backups, key rotation, incident response, and monitoring; the README
