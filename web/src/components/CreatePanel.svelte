@@ -2,6 +2,7 @@
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import PosterThumb from './PosterThumb.svelte';
   import { copyText } from '../clipboard.js';
+  import qrcode from 'qrcode-generator';
 
   export let apiKey;
 
@@ -70,8 +71,12 @@
   let formError = '';
   let submitting = false;
   let created = null;
+  let createdPassword = '';
+  let qrSvg = '';
   let copied = false;
+  let copiedDetails = false;
   let copyTimer;
+  let detailsTimer;
   let copyError = '';
 
   onMount(() => {
@@ -318,12 +323,21 @@
         throw new Error(data.error || 'Could not create the link.');
       }
       created = data;
+      createdPassword = password;
+      qrSvg = makeQr(data.publicUrl);
       dispatch('created');
     } catch (e) {
       formError = e.message || 'Could not create the link.';
     } finally {
       submitting = false;
     }
+  }
+
+  function makeQr(url) {
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    return qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
   }
 
   async function copyCreated() {
@@ -338,9 +352,28 @@
     copyTimer = setTimeout(() => (copied = false), 1600);
   }
 
+  async function copyDetails() {
+    const lines = ['Jellyfin Share', created.publicUrl];
+    if (createdPassword) lines.push(`Password: ${createdPassword}`);
+    lines.push(created.expiresAt ? `Expires: ${formatDate(created.expiresAt)}` : 'Never expires');
+
+    const ok = await copyText(lines.join('\n'));
+    if (!ok) {
+      copyError = 'Couldn’t copy the details. Select the address and copy it yourself.';
+      return;
+    }
+    copyError = '';
+    copiedDetails = true;
+    clearTimeout(detailsTimer);
+    detailsTimer = setTimeout(() => (copiedDetails = false), 1600);
+  }
+
   function createAnother() {
     created = null;
+    createdPassword = '';
+    qrSvg = '';
     copied = false;
+    copiedDetails = false;
     copyError = '';
     selectedItem = null;
     searchQuery = '';
@@ -376,8 +409,18 @@
         <button class="btn-ghost" type="button" on:click={copyCreated}>
           {copied ? 'Copied' : 'Copy link'}
         </button>
+        <button class="btn-ghost" type="button" on:click={copyDetails}>
+          {copiedDetails ? 'Copied' : createdPassword ? 'Copy link + password' : 'Copy details'}
+        </button>
       </div>
       {#if copyError}<p class="copy-error" role="alert">{copyError}</p>{/if}
+
+      {#if qrSvg}
+        <div class="success__qr">
+          <div class="success__qr-code" aria-label="QR code for the share link">{@html qrSvg}</div>
+          <p class="success__qr-note">Scan to open the link on a phone.</p>
+        </div>
+      {/if}
 
       <p class="success__meta">
         {#if created.expiresAt}Expires {formatDate(created.expiresAt)}{:else}Never expires{/if}
@@ -1046,6 +1089,31 @@
   .copy-error {
     font-size: var(--text-sm);
     color: var(--color-danger);
+  }
+
+  .success__qr {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .success__qr-code {
+    flex: none;
+    width: 8.5rem;
+    padding: var(--space-xs);
+    background: #fff;
+    border-radius: var(--radius-input);
+  }
+
+  .success__qr-code :global(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .success__qr-note {
+    font-size: var(--text-sm);
+    color: var(--color-muted);
   }
 
   .success__meta {

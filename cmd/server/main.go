@@ -105,6 +105,7 @@ func main() {
 		r.Post("/shares/{id}/revoke", adminHandler.RevokeShare)
 		r.Patch("/shares/{id}", adminHandler.UpdateShare)
 		r.Get("/shares/{id}/analytics", adminHandler.GetShareAnalytics)
+		r.Get("/analytics", adminHandler.GetAnalytics)
 		r.Get("/stats", adminHandler.GetStats)
 		r.Get("/jellyfin/items", adminHandler.SearchLibrary)
 		r.Get("/jellyfin/items/{id}/poster", adminHandler.GetItemPoster)

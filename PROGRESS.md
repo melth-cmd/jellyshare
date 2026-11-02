@@ -487,6 +487,13 @@ pass.
 - Steps 8 and 9 done: empty/error/disclosure copy polished, docs rewritten to
   match the built admin flow, and a scripted end-to-end pass covered movie,
   series, season, episode, password, play-limit, bulk, and cleanup paths.
+- #15 done: the public share page now shows Audio/Subtitles selects below Play,
+  always visible, instead of a collapsed Change row above it.
+- #9 done: the create success panel can copy a block with the URL, password and
+  expiry, and renders a QR code for the link. Added `qrcode-generator`.
+- #8 done: new Analytics tab in the admin pill with Overview and Links sub-tabs,
+  backed by `GET /api/admin/analytics` (aggregate totals, 30-day views, and
+  per-link views/unique viewers/average watch time).
 - Fixed the blank admin page after the Svelte 5 upgrade: `main.js` still used the
   Svelte 4 `new App({ target })` API. It now uses `mount(App, { target })`.
   Verified by rendering the production bundle in jsdom: the admin login page

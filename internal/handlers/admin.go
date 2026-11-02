@@ -501,6 +501,16 @@ func (h *AdminHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *AdminHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
+	overview, err := h.db.GetAnalyticsOverview(r.Context())
+	if err != nil {
+		log.Printf("Failed to get analytics overview: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to get analytics")
+		return
+	}
+	writeJSON(w, http.StatusOK, overview)
+}
+
 func (h *AdminHandler) GetShareAnalytics(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
