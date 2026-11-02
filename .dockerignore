@@ -18,3 +18,6 @@ web/.preview
 coverage.*
 /jfshare
 /tmp
+
+# Local database dumps
+.backups

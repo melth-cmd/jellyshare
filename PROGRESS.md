@@ -487,6 +487,12 @@ pass.
 - Steps 8 and 9 done: empty/error/disclosure copy polished, docs rewritten to
   match the built admin flow, and a scripted end-to-end pass covered movie,
   series, season, episode, password, play-limit, bulk, and cleanup paths.
+- Backup work for #2 is done: `scripts/backup-db.sh` writes checked gzip dumps
+  into gitignored `.backups/` and keeps five, `scripts/restore-db.sh` refuses
+  production without `FORCE_PRODUCTION=1`, and a user systemd timer runs nightly
+  at 03:30. Tested retention with dummy dumps, restored a real dump into a
+  throwaway Postgres container, and verified counts and migration 12. Docs and
+  Makefile targets added.
 - Security pass: forwarded IPs now require a private proxy and use the rightmost
   X-Forwarded-For; admin digests compare in constant time; CORS no longer claims
   credentials; request bodies are capped; password guesses get a 10/min limit;

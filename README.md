@@ -213,6 +213,57 @@ create API accepts an explicit `jellyfinUserId` when another owner is needed.
 | `JFSHARE_ALLOW_DOWNLOADS` | Offer downloads of the original file, and of a season or series as one ZIP. Each download counts as one play | `true` |
 | `JFSHARE_SHARE_RETENTION_DAYS` | Days after a link expired or was revoked before its row is deleted. Live and never-expiring links are never deleted. `0` keeps stale rows forever | `365` |
 
+## Backups
+
+The database is the only copy of share links, password hashes, sessions and
+playback progress. Dumps are written to `.backups/` in the repository; the
+directory is gitignored and excluded from the Docker build context.
+
+```bash
+make backup-db
+# or: scripts/backup-db.sh
+```
+
+The script keeps the newest **five** dumps and removes older ones. Override with
+`BACKUP_DIR`, `BACKUP_KEEP`, or `PROD_DB_CONTAINER` if needed. A dump is
+decompressed and checked before it is kept, so a truncated file is not mistaken
+for a backup. Dumps are written `0600` inside a `0700` directory because they
+contain share tokens and password hashes.
+
+### Nightly timer
+
+The units in `scripts/systemd/` run a backup at 03:30 local time with up to five
+minutes of jitter. `Persistent=true` catches a run missed while the machine was
+off.
+
+```bash
+mkdir -p ~/.config/systemd/user
+cp scripts/systemd/jfshare-backup.service scripts/systemd/jfshare-backup.timer ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now jfshare-backup.timer
+systemctl --user list-timers jfshare-backup.timer
+```
+
+A user timer keeps running after logout only when lingering is enabled
+(`loginctl enable-linger "$USER"`).
+
+### Restore
+
+```bash
+# Restore into the dev database (the safe default)
+make restore-db FILE=.backups/jfshare-20261102T050239Z.sql.gz
+
+# Restore production only when you mean it
+docker compose stop jfshare
+FORCE_PRODUCTION=1 scripts/restore-db.sh .backups/jfshare-20261102T050239Z.sql.gz jfshare-db
+docker compose start jfshare
+```
+
+The restore drops and recreates the target's `public` schema, then loads the
+dump. Stop the app first when restoring production; its open connections are
+terminated and it should reconnect after the restore completes. The dev target
+defaults to `jfshare-db-dev`.
+
 ## API Reference
 
 ### Admin Endpoints

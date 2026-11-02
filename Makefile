@@ -1,4 +1,4 @@
-.PHONY: help demo-up demo-down demo-reset dev dev-up dev-down dev-logs dev-shell dev-db-sync prod prod-up prod-down prod-logs build clean test
+.PHONY: help demo-up demo-down demo-reset dev dev-up dev-down dev-logs dev-shell dev-db-sync backup-db restore-db prod prod-up prod-down prod-logs build clean test
 
 # Default target
 help:
@@ -16,6 +16,8 @@ help:
 	@echo "  make dev-shell   - Open shell in dev container"
 	@echo "  make dev-rebuild - Rebuild dev container"
 	@echo "  make dev-db-sync - Copy production data into the dev database"
+	@echo "  make backup-db   - Dump production into .backups (keep 5)"
+	@echo "  make restore-db FILE=... [TARGET=...] - Restore a dump (default: dev)"
 	@echo ""
 	@echo "Production:"
 	@echo "  make prod-up     - Build and start production"
@@ -62,6 +64,13 @@ dev-logs:
 
 dev-db-sync:
 	scripts/sync-dev-db.sh
+
+backup-db:
+	scripts/backup-db.sh
+
+restore-db:
+	@test -n "$(FILE)" || (echo "usage: make restore-db FILE=.backups/jfshare-....sql.gz [TARGET=jfshare-db-dev]" && exit 1)
+	scripts/restore-db.sh "$(FILE)" $(TARGET)
 
 dev-shell:
 	docker-compose -f docker-compose.dev.yml exec dev bash

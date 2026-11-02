@@ -34,6 +34,10 @@ make dev-down
 # Refresh dev database from production
 make dev-db-sync
 
+# Database backups (writes .backups/, keeps five)
+make backup-db
+make restore-db FILE=.backups/jfshare-....sql.gz
+
 # Local demo with a throwaway Jellyfin
 make demo-up
 ```

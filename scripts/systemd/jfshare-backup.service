@@ -1,0 +1,9 @@
+[Unit]
+Description=Back up the Jellyfin Share database
+
+[Service]
+Type=oneshot
+WorkingDirectory=/mnt/HUB1/jellyfin/jellyfin-share-backend
+ExecStart=/mnt/HUB1/jellyfin/jellyfin-share-backend/scripts/backup-db.sh
+Nice=10
+IOSchedulingClass=idle
