@@ -121,7 +121,7 @@
 
   // The episode after the one playing, for the card near its end.
   $: upNext = isPlaying && currentEpisodeId ? nextEpisode(currentEpisodeId) : null;
-  $: nextUpCard = upNext ? { label: episodeLabel(upNext, multiSeason), name: upNext.name } : null;
+  $: nextUpCard = upNext ? { label: episodeLabel($t, upNext, multiSeason), name: upNext.name } : null;
 
   // The track the viewer picked, so the player can name it and switch it on.
   $: chosenSubtitle = (shareInfo.subtitleTracks || []).find((t) => t.index === selectedSubtitleIndex);
@@ -162,13 +162,13 @@
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        episodesError = refusal(response.status, data.error, 'episodes');
+        episodesError = refusal($t, response.status, data.error, 'episodes');
         return;
       }
       const data = await response.json();
       episodes = data.episodes || [];
     } catch (e) {
-      episodesError = OFFLINE;
+      episodesError = $t('common.offline');
     } finally {
       episodesLoading = false;
     }
@@ -269,24 +269,17 @@
   // The server's error strings are written for logs. The viewer needs what
   // happened, whether it cost a play, and what to do; every refusal below comes
   // back before the server charges anything, so "no play was used" is true.
-  const OFFLINE = 'Couldn’t reach the server. Check your connection and try again.';
-
-  function refusal(status, serverError = '', action = 'play') {
-    const what = {
-      play: 'Playback didn’t start.',
-      next: 'The next episode didn’t start.',
-      download: 'The download didn’t start.',
-      episodes: 'The episodes couldn’t be loaded.'
-    }[action];
-    const free = action === 'episodes' ? '' : ' No play was used.';
+  function refusal(translate, status, serverError = '', action = 'play') {
+    const what = translate(`refusal.${action}`);
+    const free = action === 'episodes' ? '' : translate('refusal.free');
     const said = String(serverError).toLowerCase();
 
     if (status === 401) {
       needsPassword = true;
-      return 'This link needs its password again.';
+      return translate('refusal.password');
     }
-    if (status === 410) return 'This link has expired, or whoever shared it switched it off.';
-    if (status === 429) return `${what} Too many tries in a short time — wait a minute, then try again.`;
+    if (status === 410) return translate('refusal.expired');
+    if (status === 429) return translate('refusal.tooMany', { what });
     if (status === 403) {
       if (said.includes('maximum plays')) {
         // The page turns into the spent view, whose statement says this - unless
@@ -294,19 +287,19 @@
         // never knew of a limit to count down.
         shareInfo = { ...shareInfo, totalPlays: Math.max(shareInfo.totalPlays, playLimit || 0) };
         return castSessionId || $castConnected || !playLimit
-          ? 'All the plays on this link have been used. Ask whoever shared it for a new link.'
+          ? translate('refusal.playsUsed')
           : '';
       }
       if (said.includes('concurrent')) {
-        return `${what} Every place on this link is taken right now. Try again once someone stops watching.${free}`;
+        return translate('refusal.concurrent', { what, free });
       }
-      if (said.includes('downloads')) return 'Downloads are switched off for this link.';
+      if (said.includes('downloads')) return translate('refusal.downloadsOff');
     }
     if (status === 400 && said.includes('track')) {
-      return `${what} The audio or subtitle track you picked isn’t available here. Pick another.${free}`;
+      return translate('refusal.track', { what, free });
     }
-    if (status === 502) return `${what} The media server didn’t answer. Try again in a minute.${free}`;
-    return `${what} Try again, or let whoever shared the link know.${free}`;
+    if (status === 502) return translate('refusal.mediaServer', { what, free });
+    return translate('refusal.generic', { what, free });
   }
 
   function formatDuration(seconds) {
@@ -316,8 +309,6 @@
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
   }
-
-  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
   // "in 6 days" while there is time to spare; under two days the hours count.
   function expiryWords(expiresAt, translate) {
@@ -401,25 +392,28 @@
   // a viewer. A track is named by its language and, for audio, its layout; only
   // tracks that would then share a name - a commentary in the same language -
   // keep Jellyfin's title, since that is what tells them apart.
-  const LAYOUTS = { 1: 'Mono', 2: 'Stereo', 6: '5.1', 8: '7.1' };
+  const LAYOUTS = { 1: 'track.mono', 2: 'track.stereo', 6: '5.1', 8: '7.1' };
 
-  function plainLabel(t, fallback) {
+  function plainLabel(translate, t, fallback) {
     const name = languageName(toBcp47(t.language)) || t.displayTitle || `${fallback} ${t.index}`;
     const extra = [];
-    if (t.channels) extra.push(LAYOUTS[t.channels] || `${t.channels} channels`);
-    if (t.isForced) extra.push('forced');
+    if (t.channels) {
+      const layout = LAYOUTS[t.channels];
+      extra.push(layout?.startsWith('track.') ? translate(layout) : layout || translate('track.channels', { count: t.channels }));
+    }
+    if (t.isForced) extra.push(translate('track.forced'));
     return extra.length ? `${name} (${extra.join(', ')})` : name;
   }
 
-  function labelTracks(tracks = [], fallback) {
-    const plain = tracks.map((t) => plainLabel(t, fallback));
+  function labelTracks(translate, tracks = [], fallback) {
+    const plain = tracks.map((t) => plainLabel(translate, t, fallback));
     return new Map(tracks.map((t, i) => [
       t.index,
       plain.indexOf(plain[i]) !== plain.lastIndexOf(plain[i]) && t.displayTitle ? t.displayTitle : plain[i]
     ]));
   }
 
-  $: audioLabels = labelTracks(shareInfo.audioTracks, 'Track');
+  $: audioLabels = labelTracks($t, shareInfo.audioTracks, $t('track.track'));
   // Left to itself Jellyfin may pick audio by its own account's language
   // preference, which the page cannot see. So the track marked default - or the
   // first - is chosen outright and sent like any other choice: what the menu
@@ -428,7 +422,7 @@
   $: if (selectedAudioIndex == null && shareInfo.audioTracks?.length > 1 && defaultAudio) {
     selectedAudioIndex = defaultAudio.index;
   }
-  $: subtitleLabels = labelTracks(shareInfo.subtitleTracks, 'Subtitle');
+  $: subtitleLabels = labelTracks($t, shareInfo.subtitleTracks, $t('track.subtitle'));
 
   // The family watches in Thai, so the first Thai track is the sensible default.
   // Jellyfin's language tag is the reliable signal; the display title covers
@@ -613,7 +607,7 @@
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        playError = refusal(response.status, data.error, 'play');
+        playError = refusal($t, response.status, data.error, 'play');
         return;
       }
       const data = await response.json();
@@ -662,7 +656,7 @@
     return castItem({
       playPath: episodePlayPath(episode.id, { codec: 'h264', continues }),
       title: episode.name,
-      subtitle: `${episodeLabel(episode, multiSeason)} \u00b7 ${displayTitle}`,
+      subtitle: `${episodeLabel($t, episode, multiSeason)} \u00b7 ${displayTitle}`,
       durationSeconds: episode.runtimeSeconds,
       episodeId: episode.id,
       startTime,
@@ -697,18 +691,28 @@
 
   // multiSeason is passed in, not read, so that every reactive statement and
   // template expression that names an episode lists it and follows it.
-  function episodeLabel(episode, spansSeasons) {
-    const n = `Episode ${episode.indexNumber || '?'}`;
-    return spansSeasons && episode.seasonNumber ? `Season ${episode.seasonNumber}, ${n.toLowerCase()}` : n;
+  function episodeLabel(translate, episode, spansSeasons) {
+    const number = episode.indexNumber || '?';
+    return spansSeasons && episode.seasonNumber
+      ? translate('play.episodeLabelSeason', { season: episode.seasonNumber, number })
+      : translate('play.episodeLabel', { number });
   }
 
   // What a series' Play does, in its own words.
-  function seriesPlayText(resume, list, spansSeasons) {
-    if (resume?.position > 0) return `Resume ${episodeLabel(resume.episode, spansSeasons)}`;
-    if (resume) return `${resume.isNext ? 'Continue with' : 'Play'} ${episodeLabel(resume.episode, spansSeasons)}`;
-    return list.length ? `Play ${episodeLabel(list[0], spansSeasons)}` : '';
+  function seriesPlayText(translate, resume, list, spansSeasons) {
+    if (resume?.position > 0) {
+      return translate('play.seriesResume', { episode: episodeLabel(translate, resume.episode, spansSeasons) });
+    }
+    if (resume) {
+      return translate(resume.isNext ? 'play.seriesContinue' : 'play.seriesPlay', {
+        episode: episodeLabel(translate, resume.episode, spansSeasons)
+      });
+    }
+    return list.length
+      ? translate('play.seriesPlay', { episode: episodeLabel(translate, list[0], spansSeasons) })
+      : '';
   }
-  $: seriesPlayLabel = seriesPlayText(seriesResume, episodes, multiSeason);
+  $: seriesPlayLabel = seriesPlayText($t, seriesResume, episodes, multiSeason);
 
   // The list is already in running order, so "next" is simply the row below.
   function nextEpisode(afterId) {
@@ -773,7 +777,7 @@
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        nextFailed(refusal(response.status, data.error, 'next'), previous, next);
+        nextFailed(refusal($t, response.status, data.error, 'next'), previous, next);
         return;
       }
       startPosition = 0;
@@ -788,9 +792,9 @@
       }
       playbackData = data;
       currentEpisodeId = next.id;
-      currentPlayingTitle = `${episodeLabel(next, multiSeason)}: ${next.name}`;
+      currentPlayingTitle = `${episodeLabel($t, next, multiSeason)}: ${next.name}`;
     } catch (e) {
-      nextFailed(OFFLINE, previous, next);
+      nextFailed($t('common.offline'), previous, next);
     }
   }
 
@@ -845,7 +849,7 @@
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        playError = refusal(response.status, data.error, 'play');
+        playError = refusal($t, response.status, data.error, 'play');
         return;
       }
       startPosition = startAt;
@@ -855,7 +859,7 @@
       currentEpisodeId = null;
       isPlaying = true;
     } catch (e) {
-      playError = OFFLINE;
+      playError = $t('common.offline');
     } finally {
       starting = null;
     }
@@ -873,17 +877,17 @@
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        playError = refusal(response.status, data.error, 'play');
+        playError = refusal($t, response.status, data.error, 'play');
         return;
       }
       startPosition = startAt;
       playbackData = await response.json();
       spendPlay();
-      currentPlayingTitle = `${episodeLabel(episode, multiSeason)}: ${episode.name}`;
+      currentPlayingTitle = `${episodeLabel($t, episode, multiSeason)}: ${episode.name}`;
       currentEpisodeId = episode.id;
       isPlaying = true;
     } catch (e) {
-      playError = OFFLINE;
+      playError = $t('common.offline');
     } finally {
       starting = null;
     }
@@ -994,7 +998,7 @@
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        playError = refusal(response.status, data.error, 'download');
+        playError = refusal($t, response.status, data.error, 'download');
         return;
       }
       const { downloadUrl } = await response.json();
@@ -1006,7 +1010,7 @@
       a.remove();
       spendPlay();
     } catch (e) {
-      playError = OFFLINE;
+      playError = $t('common.offline');
     } finally {
       preparingDownload = null;
     }
@@ -1024,12 +1028,13 @@
     : 0;
 
   // What a confirm says: the size, and what the download costs.
-  function downloadCost(what, bytes) {
+  function downloadCost(translate, what, bytes) {
     const size = formatBytes(bytes);
     const thing = size ? `${what} (${size})` : what;
-    return lastPlay
-      ? `Downloading ${thing} uses ${playLimit === 1 ? 'the link’s only' : 'the last'} play. The link can’t be streamed afterwards.`
-      : `Downloading ${thing} uses one of the ${plural(playsLeft, 'play')} left.`;
+    if (lastPlay) {
+      return translate(playLimit === 1 ? 'download.costOnly' : 'download.costLast', { thing });
+    }
+    return translate('download.costRemaining', { thing, count: playsLeft });
   }
 
   // Escape inside a confirm is "Don’t download".
@@ -1106,7 +1111,7 @@
          has to be rebuilt around it rather than handed a new URL mid-flight. -->
     {#key playbackData.sessionId}
       <Player {playbackData} title={currentPlayingTitle || shareInfo.title}
-              subtitleLabel={chosenSubtitle ? subtitleLabels.get(chosenSubtitle.index) : 'Subtitles'}
+              subtitleLabel={chosenSubtitle ? subtitleLabels.get(chosenSubtitle.index) : $t('track.subtitles')}
               subtitleLanguage={toBcp47(chosenSubtitle?.language)}
               {startPosition}
               nextUp={nextUpCard}
@@ -1251,7 +1256,7 @@
                           disabled={busy || playsUsedUp}>
                     {#if starting !== null}
                       <span class="meter meter--inline" aria-hidden="true"></span>
-                      <span>Starting</span>
+                      <span>{$t('play.starting')}</span>
                     {:else}
                       <span class="btn__main">
                         <PlayIcon />
@@ -1270,7 +1275,7 @@
                              place, so there is nothing to wait for or recompute. -->
                         <button class="link" on:click={() => playEpisode(seriesResume.episode)}
                                 disabled={busy || playsUsedUp}>
-                          Restart {episodeLabel(seriesResume.episode, multiSeason)}
+                          {$t('play.restart', { episode: episodeLabel($t, seriesResume.episode, multiSeason) })}
                         </button>
                       {/if}
                     </p>
@@ -1280,7 +1285,7 @@
                   <button class="btn-ghost" id="dl-all" on:click={() => rowDownload('all', downloadAll)}
                           disabled={busy || playsUsedUp} aria-expanded={playLimit ? confirmingDownload === 'all' : undefined}>
                     <DownloadIcon />
-                    <span>{preparingDownload === 'all' ? 'Preparing' : 'Download all'}</span>
+                    <span>{preparingDownload === 'all' ? $t('download.preparing') : $t('download.downloadAll')}</span>
                     {#if allBytes}<span class="btn__aside">{formatBytes(allBytes)}</span>{/if}
                   </button>
                 {/if}
@@ -1291,27 +1296,27 @@
                       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <rect x="6" y="6" width="12" height="12" rx="1.5" />
                       </svg>
-                      <span>Stop casting</span>
+                      <span>{$t('cast.stopCasting')}</span>
                     </button>
                   {:else}
                     <button class="btn-ghost" on:click={connectCast} disabled={casting}>
                       <CastIcon />
-                      <span>{casting ? 'Connecting' : 'Cast to a TV'}</span>
+                      <span>{casting ? $t('cast.connecting') : $t('cast.castToTv')}</span>
                     </button>
                   {/if}
                 {/if}
                 {#if confirmingDownload === 'all'}
                   <div class="confirm" role="group" aria-labelledby="confirm-all">
-                    <p class="confirm__q" id="confirm-all">{downloadCost('every episode', allBytes)}</p>
-                    <button class={lastPlay ? 'btn-danger' : 'btn-primary'} use:focusOnMount on:keydown={escapeTo('all')} on:click={downloadAll}>Download it</button>
-                    <button class="btn-ghost" on:keydown={escapeTo('all')} on:click={() => keepPlay('all')}>Don’t download</button>
+                    <p class="confirm__q" id="confirm-all">{downloadCost($t, $t('download.everyEpisode'), allBytes)}</p>
+                    <button class={lastPlay ? 'btn-danger' : 'btn-primary'} use:focusOnMount on:keydown={escapeTo('all')} on:click={downloadAll}>{$t('download.downloadIt')}</button>
+                    <button class="btn-ghost" on:keydown={escapeTo('all')} on:click={() => keepPlay('all')}>{$t('download.dontDownload')}</button>
                   </div>
                 {/if}
               </div>
               {#if $castConnected}
                 <p class="castbar__state" role="status">
-                  {#if castSessionId}Playing on <strong>{$castDeviceName}</strong>. Keep this page open while it plays.
-                  {:else}Connected to <strong>{$castDeviceName}</strong>. Pick an episode below to play it there.{/if}
+                  {#if castSessionId}{$t('cast.playingOn', { device: $castDeviceName })}
+                  {:else}{$t('cast.connectedPick', { device: $castDeviceName })}{/if}
                 </p>
               {/if}
             {/if}
@@ -1324,11 +1329,11 @@
                         disabled={busy || playsUsedUp}>
                   {#if starting === MAIN}
                     <span class="meter meter--inline" aria-hidden="true"></span>
-                    <span>Starting</span>
+                    <span>{$t('play.starting')}</span>
                   {:else}
                     <span class="btn__main">
                       <PlayIcon />
-                      <span>{resumedMidway ? 'Resume' : 'Play'}</span>
+                      <span>{$t(resumedMidway ? 'play.resume' : 'play.play')}</span>
                     </span>
                     {#if resumedMidway}
                       <span class="btn__aside">{clockOf(movieResumeAt, shareInfo.runtimeSeconds)}</span>
@@ -1338,7 +1343,7 @@
                 {#if resumeNote}
                   <p class="play__note play__note--link">
                     <span id="resume-note">{resumeNote}</span>
-                    <button class="link" on:click={() => startPlayback()} disabled={busy || playsUsedUp}>Start from the beginning</button>
+                    <button class="link" on:click={() => startPlayback()} disabled={busy || playsUsedUp}>{$t('play.startFromBeginning')}</button>
                   </p>
                 {/if}
               </div>
@@ -1347,7 +1352,7 @@
                 <button class="btn-ghost" id="dl-{MAIN}" on:click={() => rowDownload(MAIN, downloadMovie)}
                         disabled={busy || playsUsedUp} aria-expanded={playLimit ? confirmingDownload === MAIN : undefined}>
                   <DownloadIcon />
-                  <span>{preparingDownload === MAIN ? 'Preparing' : 'Download'}</span>
+                  <span>{preparingDownload === MAIN ? $t('download.preparing') : $t('download.download')}</span>
                   {#if shareInfo.downloadBytes}<span class="btn__aside">{formatBytes(shareInfo.downloadBytes)}</span>{/if}
                 </button>
               {/if}
@@ -1355,37 +1360,37 @@
               {#if $castApiReady}
                 <button class="btn-ghost" on:click={startCast} disabled={busy || playsUsedUp}>
                   <CastIcon />
-                  <span>{casting ? 'Connecting' : ($castConnected ? $castDeviceName : 'Cast to a TV')}</span>
+                  <span>{casting ? $t('cast.connecting') : ($castConnected ? $castDeviceName : $t('cast.castToTv'))}</span>
                 </button>
                 {#if $castConnected}
                   <button class="btn-ghost" on:click={endCastSession}>
                     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                       <rect x="6" y="6" width="12" height="12" rx="1.5" />
                     </svg>
-                    <span>Stop</span>
+                    <span>{$t('cast.stop')}</span>
                   </button>
                 {/if}
               {/if}
 
               {#if $castConnected}
                 <p class="castbar__state" role="status">
-                  {#if castSessionId}Playing on <strong>{$castDeviceName}</strong>. Keep this page open while it plays.
-                  {:else}Connected to <strong>{$castDeviceName}</strong>.{/if}
+                  {#if castSessionId}{$t('cast.playingOn', { device: $castDeviceName })}
+                  {:else}{$t('cast.connected', { device: $castDeviceName })}{/if}
                 </p>
               {/if}
 
               <!-- On a line of its own under the row, so the row keeps its shape. -->
               {#if confirmingDownload === MAIN}
                 <div class="confirm" role="group" aria-labelledby="confirm-main">
-                  <p class="confirm__q" id="confirm-main">{downloadCost('the film', shareInfo.downloadBytes)}</p>
-                  <button class={lastPlay ? 'btn-danger' : 'btn-primary'} use:focusOnMount on:keydown={escapeTo(MAIN)} on:click={downloadMovie}>Download it</button>
-                  <button class="btn-ghost" on:keydown={escapeTo(MAIN)} on:click={() => keepPlay(MAIN)}>Don’t download</button>
+                  <p class="confirm__q" id="confirm-main">{downloadCost($t, $t('download.theFilm'), shareInfo.downloadBytes)}</p>
+                  <button class={lastPlay ? 'btn-danger' : 'btn-primary'} use:focusOnMount on:keydown={escapeTo(MAIN)} on:click={downloadMovie}>{$t('download.downloadIt')}</button>
+                  <button class="btn-ghost" on:keydown={escapeTo(MAIN)} on:click={() => keepPlay(MAIN)}>{$t('download.dontDownload')}</button>
                 </div>
               {/if}
             </div>
 
             {#if movieWatched}
-              <p class="watched"><CheckIcon /> <span>Watched</span></p>
+              <p class="watched"><CheckIcon /> <span>{$t('play.watched')}</span></p>
             {/if}
           {/if}
         {/if}
@@ -1397,7 +1402,7 @@
             <div class="tracks__fields">
               {#if shareInfo.audioTracks && shareInfo.audioTracks.length > 1}
                 <div class="field">
-                  <label for="audio-select">Audio</label>
+                  <label for="audio-select">{$t('track.audio')}</label>
                   <select id="audio-select" bind:value={selectedAudioIndex}>
                     {#each shareInfo.audioTracks as track}
                       <option value={track.index}>{audioLabels.get(track.index)}</option>
@@ -1407,10 +1412,10 @@
               {/if}
               {#if shareInfo.subtitleTracks && shareInfo.subtitleTracks.length > 0}
                 <div class="field">
-                  <label for="subtitle-select">Subtitles</label>
+                  <label for="subtitle-select">{$t('track.subtitles')}</label>
                   <select id="subtitle-select" bind:value={selectedSubtitleIndex}
                           on:change={() => (subtitleTouched = true)}>
-                    <option value={null}>None</option>
+                    <option value={null}>{$t('track.none')}</option>
                     {#each shareInfo.subtitleTracks as track}
                       <option value={track.index}>{subtitleLabels.get(track.index)}</option>
                     {/each}
@@ -1436,7 +1441,7 @@
              before the TV let go would only repeat it. -->
         {#if playError && !spent}<p class="msg msg--error" role="alert">{playError}</p>{/if}
         {#if $subtitlesDropped}
-          <p class="msg" role="status">Casting without subtitles: the TV wouldn’t take the track.</p>
+          <p class="msg" role="status">{$t('cast.subtitlesDropped')}</p>
         {/if}
 
         {#if shareInfo.overview && !needsPassword}
@@ -1445,20 +1450,20 @@
 
         {#if isSeasonOrSeries && !needsPassword}
           <div class="episodes">
-            <h2 class="episodes__head" aria-label={episodes.length ? plural(episodes.length, 'episode') : 'Episodes'}>
-              Episodes
+            <h2 class="episodes__head" aria-label={episodes.length ? $t('play.episodesCount', { count: episodes.length }) : $t('play.episodes')}>
+              {$t('play.episodes')}
               {#if episodes.length > 0}<span class="episodes__n">{episodes.length}</span>{/if}
             </h2>
 
             {#if episodesLoading}
-              <div class="state" role="status"><div class="meter"></div><p>Loading episodes</p></div>
+              <div class="state" role="status"><div class="meter"></div><p>{$t('play.loadingEpisodes')}</p></div>
             {:else if episodesError}
               <div class="state">
                 <p class="msg msg--error" role="alert">{episodesError}</p>
-                <button class="link" on:click={loadEpisodes}>Try again</button>
+                <button class="link" on:click={loadEpisodes}>{$t('play.tryAgain')}</button>
               </div>
             {:else if episodes.length === 0}
-              <p class="msg">This link doesn’t include any episodes yet.</p>
+              <p class="msg">{$t('play.noEpisodes')}</p>
             {:else}
               <ul class="eplist" class:eplist--seasons={multiSeason} class:eplist--spent={spent}>
                 {#each episodes as episode (episode.id)}
@@ -1468,7 +1473,7 @@
                     {#if spent}
                       <!-- Nothing left to play it with: the list stays, as a record. -->
                       <div class="ep ep--static" class:ep--thumb={thumb}>
-                        <span class="sr-only">{episodeLabel(episode, multiSeason)}:</span>
+                        <span class="sr-only">{episodeLabel($t, episode, multiSeason)}:</span>
                         <span class="ep__no" aria-hidden="true">{#if multiSeason && episode.seasonNumber}{episode.seasonNumber}.{episode.indexNumber || '?'}{:else}{episode.indexNumber || '?'}{/if}</span>
                         {#if thumb}
                           <img class="ep__thumb" src="{episode.posterUrl}?maxWidth=320" alt="" loading="lazy"
@@ -1479,7 +1484,7 @@
                           {#if episode.overview}<span class="ep__about">{episode.overview}</span>{/if}
                         </span>
                         <span class="ep__end">
-                          {#if seen >= 1}<span class="ep__watched"><CheckIcon title="Watched" /></span>{/if}
+                          {#if seen >= 1}<span class="ep__watched"><CheckIcon title={$t('play.watched')} /></span>{/if}
                           {#if episode.runtimeSeconds}<span class="ep__len">{formatDuration(episode.runtimeSeconds)}</span>{/if}
                         </span>
                       </div>
@@ -1490,7 +1495,7 @@
                             disabled={busy || playsUsedUp}
                             aria-describedby={episode.overview ? `ep-about-${episode.id}` : undefined}
                             on:click={() => resumeEpisode(episode)}>
-                      <span class="sr-only">{$castConnected ? `Play on ${$castDeviceName}:` : 'Play'} {episodeLabel(episode, multiSeason)}:</span>
+                      <span class="sr-only">{$castConnected ? $t('play.playOnDevice', { device: $castDeviceName }) : $t('play.play')} {episodeLabel($t, episode, multiSeason)}:</span>
                       <span class="ep__no" aria-hidden="true">
                         {#if multiSeason && episode.seasonNumber}{episode.seasonNumber}.{episode.indexNumber || '?'}{:else}{episode.indexNumber || '?'}{/if}
                       </span>
@@ -1504,7 +1509,7 @@
                       </span>
                       <span class="ep__end" class:ep__end--cast={$castConnected}>
                         {#if seen >= 1}
-                          <span class="ep__watched"><CheckIcon title="Watched" /></span>
+                          <span class="ep__watched"><CheckIcon title={$t('play.watched')} /></span>
                         {/if}
                         {#if episode.runtimeSeconds}
                           <span class="ep__len">{formatDuration(episode.runtimeSeconds)}</span>
@@ -1512,7 +1517,7 @@
                         {#if starting === episode.id}
                           <span class="meter meter--dot" aria-hidden="true"></span>
                         {:else if $castConnected}
-                          <CastIcon title="Plays on {$castDeviceName}" />
+                          <CastIcon title={$t('play.playsOnDevice', { device: $castDeviceName })} />
                         {:else}
                           <!-- Without a receiver the row plays here, and it has to say so:
                                a title and a runtime alone do not read as a control. -->
@@ -1528,8 +1533,13 @@
                     {#if shareInfo.allowDownload && !spent}
                       <button class="ep__dl" id="dl-{episode.id}" on:click={() => rowDownload(episode.id, () => downloadEpisode(episode))}
                               disabled={busy || playsUsedUp} aria-expanded={playLimit ? confirmingDownload === episode.id : undefined}
-                              title={episode.sizeBytes ? `Download · ${formatBytes(episode.sizeBytes)}` : 'Download'}
-                              aria-label="Download {episodeLabel(episode, multiSeason)}: {episode.name}{episode.sizeBytes ? `, ${formatBytes(episode.sizeBytes)}` : ''}{playLimit ? ' (uses a play)' : ''}">
+                              title={episode.sizeBytes ? $t('download.title', { size: formatBytes(episode.sizeBytes) }) : $t('download.download')}
+                              aria-label={$t('download.aria', {
+                                episode: episodeLabel($t, episode, multiSeason),
+                                name: episode.name,
+                                size: episode.sizeBytes ? `, ${formatBytes(episode.sizeBytes)}` : '',
+                                play: playLimit ? $t('download.usesPlay') : ''
+                              })}>
                         {#if preparingDownload === episode.id}
                           <span class="meter meter--dot" aria-hidden="true"></span>
                         {:else}
@@ -1539,9 +1549,9 @@
                     {/if}
                     {#if confirmingDownload === episode.id}
                       <div class="confirm confirm--row" role="group" aria-labelledby="confirm-{episode.id}">
-                        <p class="confirm__q" id="confirm-{episode.id}">{downloadCost(episodeLabel(episode, multiSeason).toLowerCase(), episode.sizeBytes)}</p>
-                        <button class={lastPlay ? 'btn-danger' : 'btn-primary'} use:focusOnMount on:keydown={escapeTo(episode.id)} on:click={() => downloadEpisode(episode)}>Download it</button>
-                        <button class="btn-ghost" on:keydown={escapeTo(episode.id)} on:click={() => keepPlay(episode.id)}>Don’t download</button>
+                        <p class="confirm__q" id="confirm-{episode.id}">{downloadCost($t, episodeLabel($t, episode, multiSeason).toLowerCase(), episode.sizeBytes)}</p>
+                        <button class={lastPlay ? 'btn-danger' : 'btn-primary'} use:focusOnMount on:keydown={escapeTo(episode.id)} on:click={() => downloadEpisode(episode)}>{$t('download.downloadIt')}</button>
+                        <button class="btn-ghost" on:keydown={escapeTo(episode.id)} on:click={() => keepPlay(episode.id)}>{$t('download.dontDownload')}</button>
                       </div>
                     {/if}
                     {#if seen > 0}
