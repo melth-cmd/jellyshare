@@ -487,6 +487,14 @@ pass.
 - Steps 8 and 9 done: empty/error/disclosure copy polished, docs rewritten to
   match the built admin flow, and a scripted end-to-end pass covered movie,
   series, season, episode, password, play-limit, bulk, and cleanup paths.
+- #10 done: the edit dialog now changes download permission, maximum picture and
+  maximum bitrate; `PATCH /api/admin/shares/{id}` accepts `allowDownload`,
+  `maxVideoHeight` and `maxVideoBitrate` (0 clears a cap). The list exposes the
+  stored download choice and bitrate so the editor can prefill them.
+- #11 done: `POST /api/admin/shares/{id}/restore` clears a revoke only when the
+  link is still usable, and `POST /api/admin/shares/{id}/duplicate` copies the
+  terms with a new token and a fresh lifetime. Rows show Restore for revoked
+  links; the detail sheet has Duplicate and Restore.
 - #15 done: the public share page now shows Audio/Subtitles selects below Play,
   always visible, instead of a collapsed Change row above it.
 - #9 done: the create success panel can copy a block with the URL, password and

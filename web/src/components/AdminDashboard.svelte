@@ -219,6 +219,42 @@
     massNotice = 'Link updated.';
   }
 
+  async function restoreShare(share) {
+    massError = '';
+    massNotice = '';
+    try {
+      const response = await fetch(`/api/admin/shares/${share.id}/restore`, {
+        method: 'POST',
+        headers: { 'X-Backend-Key': apiKey }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Could not restore the link.');
+      await loadShares();
+      massNotice = 'Link restored.';
+      if (selectedShare?.id === share.id) closeDetails();
+    } catch (e) {
+      massError = e.message || 'Could not restore the link.';
+    }
+  }
+
+  async function duplicateShare(share) {
+    massError = '';
+    massNotice = '';
+    try {
+      const response = await fetch(`/api/admin/shares/${share.id}/duplicate`, {
+        method: 'POST',
+        headers: { 'X-Backend-Key': apiKey }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Could not duplicate the link.');
+      await loadShares();
+      massNotice = 'Link duplicated. The new link is at the top of the list.';
+      if (selectedShare?.id === share.id) closeDetails();
+    } catch (e) {
+      massError = e.message || 'Could not duplicate the link.';
+    }
+  }
+
   // Bumped by every reload, so a page still loading from before it is dropped
   // instead of being appended to the fresh list.
   let loadGeneration = 0;
@@ -598,7 +634,9 @@
                   {copiedId === share.id ? 'Copied' : 'Copy link'}
                 </button>
                 <button class="btn-ghost" on:click={() => openEdit(share)}>Edit</button>
-                {#if status === 'active'}
+                {#if status === 'revoked'}
+                  <button class="btn-ghost" on:click={() => restoreShare(share)}>Restore</button>
+                {:else if status === 'active'}
                   <button class="btn-ghost btn-ghost--warn" on:click={() => (confirmingId = share.id)}>
                     Revoke
                   </button>
@@ -656,6 +694,10 @@
     <header class="sheet__head">
       <h2>{selectedShare?.title || ''}</h2>
       <div class="sheet__tools">
+        <button class="btn-ghost" on:click={() => duplicateShare(selectedShare)}>Duplicate</button>
+        {#if selectedShare?.revokedAt}
+          <button class="btn-ghost" on:click={() => restoreShare(selectedShare)}>Restore</button>
+        {/if}
         <button class="btn-ghost" on:click={() => { closeDetails(); openEdit(selectedShare); }}>Edit link</button>
         <button class="pill__icon" on:click={closeDetails} aria-label="Close details">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
@@ -1246,6 +1288,8 @@
   .sheet__tools {
     display: flex;
     flex: none;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     align-items: center;
     gap: var(--space-xs);
   }

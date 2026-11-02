@@ -103,6 +103,8 @@ func main() {
 		r.Post("/shares/bulk/delete", adminHandler.BulkDeleteShares)
 		r.Get("/shares/{id}", adminHandler.GetShare)
 		r.Post("/shares/{id}/revoke", adminHandler.RevokeShare)
+		r.Post("/shares/{id}/restore", adminHandler.RestoreShare)
+		r.Post("/shares/{id}/duplicate", adminHandler.DuplicateShare)
 		r.Patch("/shares/{id}", adminHandler.UpdateShare)
 		r.Get("/shares/{id}/analytics", adminHandler.GetShareAnalytics)
 		r.Get("/analytics", adminHandler.GetAnalytics)

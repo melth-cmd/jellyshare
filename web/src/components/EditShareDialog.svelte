@@ -12,8 +12,31 @@
   let maxConcurrent = '';
   let password = '';
   let removePassword = false;
+  let allowDownload = true;
+  let originalAllowDownload = true;
+  let maxHeight = '';
+  let originalMaxHeight = '';
+  let maxBitrate = '';
+  let originalMaxBitrate = '';
   let error = '';
   let saving = false;
+
+  const HEIGHTS = [
+    { value: '', label: 'Auto' },
+    { value: '1080', label: '1080p' },
+    { value: '720', label: '720p' },
+    { value: '480', label: '480p' },
+    { value: '360', label: '360p' }
+  ];
+
+  const BITRATES = [
+    { value: '', label: 'Auto' },
+    { value: '20000000', label: '20 Mbps' },
+    { value: '12000000', label: '12 Mbps' },
+    { value: '8000000', label: '8 Mbps' },
+    { value: '4000000', label: '4 Mbps' },
+    { value: '2000000', label: '2 Mbps' }
+  ];
 
   export function open(item) {
     share = item;
@@ -22,6 +45,12 @@
     maxConcurrent = '';
     password = '';
     removePassword = false;
+    originalAllowDownload = item.allowDownloadStored ?? item.allowDownload;
+    allowDownload = originalAllowDownload;
+    originalMaxHeight = item.maxVideoHeight != null ? String(item.maxVideoHeight) : '';
+    maxHeight = originalMaxHeight;
+    originalMaxBitrate = item.maxVideoBitrate != null ? String(item.maxVideoBitrate) : '';
+    maxBitrate = originalMaxBitrate;
     error = '';
     saving = false;
     dialogEl?.showModal();
@@ -79,6 +108,16 @@
       body.removePassword = true;
     } else if (password !== '') {
       body.password = password;
+    }
+
+    if (allowDownload !== originalAllowDownload) {
+      body.allowDownload = allowDownload;
+    }
+    if (maxHeight !== originalMaxHeight) {
+      body.maxVideoHeight = maxHeight === '' ? 0 : Number(maxHeight);
+    }
+    if (maxBitrate !== originalMaxBitrate) {
+      body.maxVideoBitrate = maxBitrate === '' ? 0 : Number(maxBitrate);
     }
 
     if (Object.keys(body).length === 0) {
@@ -173,6 +212,34 @@
         <p class="help">Leave blank to keep the current limit.</p>
       </div>
     </div>
+
+    <div class="pair">
+      <div class="field">
+        <label for="edit-height">Maximum picture</label>
+        <select id="edit-height" class="input" bind:value={maxHeight}>
+          {#each HEIGHTS as option (option.value)}
+            <option value={option.value}>{option.label}</option>
+          {/each}
+        </select>
+        <p class="help">Auto removes the cap.</p>
+      </div>
+
+      <div class="field">
+        <label for="edit-bitrate">Maximum bitrate</label>
+        <select id="edit-bitrate" class="input" bind:value={maxBitrate}>
+          {#each BITRATES as option (option.value)}
+            <option value={option.value}>{option.label}</option>
+          {/each}
+        </select>
+        <p class="help">Auto removes the cap.</p>
+      </div>
+    </div>
+
+    <label class="check">
+      <input type="checkbox" bind:checked={allowDownload} />
+      <span>Allow downloads for this link</span>
+    </label>
+    <p class="help">The server-wide setting can still switch downloads off.</p>
 
     <div class="field">
       <label for="edit-password">New password</label>
