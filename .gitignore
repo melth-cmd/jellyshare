@@ -39,3 +39,6 @@ web/.preview/
 
 # Hallmark design-skill bookkeeping, not project documentation
 .hallmark/
+
+# Local database dumps
+/.backups/
