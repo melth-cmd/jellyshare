@@ -418,7 +418,7 @@
 
 <div class="admin bloom-ground">
   {#if activeTab === 'shares'}
-  <main class="index" id="panel-shares" role="tabpanel" aria-labelledby="tab-shares">
+  <div class="index" id="panel-shares" role="tabpanel" aria-labelledby="tab-shares">
     <p class="index__lede">
       {#if statusFilter === 'active'}
         Links that still work right now.
@@ -607,7 +607,7 @@
       {/if}
       {#if moreError}<p class="banner" role="alert">{moreError}</p>{/if}
     {/if}
-  </main>
+  </div>
   {:else}
     <div id="panel-create" role="tabpanel" aria-labelledby="tab-create">
       <CreatePanel
