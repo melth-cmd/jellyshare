@@ -447,12 +447,14 @@ pass.
 
 ### 0.4.0 — rename to Jellyshare
 
-**Full rename** *(#31)*
-- Rename the product, repo, module, image, container, env prefix, systemd
-  units, browser keys and docs to Jellyshare.
-- Decide compatibility for env vars, database names and browser state before
-  changing them.
-- Done when one name appears everywhere and an old share link still opens.
+**Full rename** *(#31)* — done.
+- Product, repo, Go module, image, container, env prefix, systemd units,
+  browser keys and docs renamed to Jellyshare.
+- Env prefix is `JELLYSHARE_*` with no fallback; the production `.env` and
+  compose switch together.
+- Database, role, container and volume renamed to `jellyshare`.
+- Browser state migrates from the old `jfshare_*` keys on first load.
+- Old `/s/{token}` links keep working.
 
 ### 0.5.0 — viewer localization
 
@@ -636,3 +638,8 @@ pass.
   `sha256:89c339ad6609f452f25b1b3ce6d423bdfe8bb0b8a731a3b5c82667d92b1f4693`;
   production is healthy on `0.3.0`, and an old 24-hex token still returns 200.
   The 0.3.0 milestone is closed.
+- #31 rename implemented: product strings, Go module, binary, env prefix,
+  containers, database/role, volumes, systemd units, backup prefix, browser
+  keys and docs now use Jellyshare. The GitHub repo is `melth-cmd/jellyshare`
+  and the image path is `ghcr.io/melth-cmd/jellyshare`. Browser state migrates
+  from the old `jfshare_*` keys on first load. Prepared `v0.4.0`.
