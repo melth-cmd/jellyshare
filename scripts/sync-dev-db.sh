@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # Copy the production database into the dev database.
 #
-# Production runs in the `jfshare-db` container; the hot-reload dev stack runs
-# its own Postgres in `jfshare-db-dev`. This replaces the dev schema with a
+# Production runs in the `jellyshare-db` container; the hot-reload dev stack runs
+# its own Postgres in `jellyshare-db-dev`. This replaces the dev schema with a
 # fresh dump, so shares visible in production are visible while testing.
 #
 # Usage: scripts/sync-dev-db.sh
 set -euo pipefail
 
-PROD_DB_CONTAINER="${PROD_DB_CONTAINER:-jfshare-db}"
-DEV_DB_CONTAINER="${DEV_DB_CONTAINER:-jfshare-db-dev}"
+PROD_DB_CONTAINER="${PROD_DB_CONTAINER:-jellyshare-db}"
+DEV_DB_CONTAINER="${DEV_DB_CONTAINER:-jellyshare-db-dev}"
 
 require_running() {
   local name="$1"

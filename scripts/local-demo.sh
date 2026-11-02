@@ -19,7 +19,7 @@ JF_USER=demo
 JF_PASSWORD=demo
 BACKEND_KEY=demo-admin-key
 MEDIA=.local/media
-CLIENT='MediaBrowser Client="jfshare-demo", Device="script", DeviceId="jfshare-demo", Version="1.0"'
+CLIENT='MediaBrowser Client="jellyshare-demo", Device="script", DeviceId="jellyshare-demo", Version="1.0"'
 
 say() { printf '\033[1m==>\033[0m %s\n' "$*"; }
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }
@@ -65,7 +65,7 @@ make_media() {
   cat > "$film/subs.en.srt" <<'SRT'
 1
 00:00:02,000 --> 00:00:06,000
-This is a test film for Jellyfin Share.
+This is a test film for Jellyshare.
 
 2
 00:00:08,000 --> 00:00:12,000
@@ -89,7 +89,7 @@ SRT
   <title>The Long Walk Home</title>
   <year>2024</year>
   <tagline>Some roads only go one way.</tagline>
-  <plot>Test media for Jellyfin Share. After twenty years away, a retired cartographer returns to the coastal town she mapped as a girl, only to find the streets no longer match any map she ever drew.</plot>
+  <plot>Test media for Jellyshare. After twenty years away, a retired cartographer returns to the coastal town she mapped as a girl, only to find the streets no longer match any map she ever drew.</plot>
   <mpaa>PG-13</mpaa>
   <rating>7.4</rating>
   <genre>Drama</genre>
@@ -109,7 +109,7 @@ NFO
 <tvshow>
   <title>Harbour Lights</title>
   <year>2024</year>
-  <plot>Test media for Jellyfin Share. A night ferry crew keeps the harbour running while the town sleeps.</plot>
+  <plot>Test media for Jellyshare. A night ferry crew keeps the harbour running while the town sleeps.</plot>
   <genre>Drama</genre>
 </tvshow>
 NFO
@@ -187,18 +187,18 @@ setup_jellyfin() {
   done
   [ -n "$MOVIE_ID" ] && [ -n "$SEASON_ID" ] || die "Jellyfin did not find the test media"
 
-  if [ -f .env.local ] && grep -q '^JFSHARE_JELLYFIN_API_KEY=.' .env.local; then
+  if [ -f .env.local ] && grep -q '^JELLYSHARE_JELLYFIN_API_KEY=.' .env.local; then
     return
   fi
   say "Creating a Jellyfin API key for the app"
-  jf POST "/Auth/Keys?app=jfshare-demo" >/dev/null
+  jf POST "/Auth/Keys?app=jellyshare-demo" >/dev/null
   local key
-  key=$(jf GET /Auth/Keys | jq -r '[.Items[] | select(.AppName == "jfshare-demo")][0].AccessToken')
+  key=$(jf GET /Auth/Keys | jq -r '[.Items[] | select(.AppName == "jellyshare-demo")][0].AccessToken')
   [ -n "$key" ] && [ "$key" != null ] || die "could not read the new API key"
   cat > .env.local <<ENV
 # Written by scripts/local-demo.sh for the local demo only.
-JFSHARE_JELLYFIN_API_KEY=$key
-JFSHARE_BACKEND_API_KEY=$BACKEND_KEY
+JELLYSHARE_JELLYFIN_API_KEY=$key
+JELLYSHARE_BACKEND_API_KEY=$BACKEND_KEY
 ENV
 }
 
@@ -216,9 +216,9 @@ share() { # label, json body
 }
 
 start_app() {
-  say "Building and starting Jellyfin Share (first build takes a few minutes)"
-  "${COMPOSE[@]}" up -d --build postgres jfshare
-  wait_for "$APP/health" "Jellyfin Share"
+  say "Building and starting Jellyshare (first build takes a few minutes)"
+  "${COMPOSE[@]}" up -d --build postgres jellyshare
+  wait_for "$APP/health" "Jellyshare"
 
   if [ "$(admin GET /api/admin/shares | jq 'if type == "array" then length else (.shares // []) | length end')" -gt 0 ]; then
     say "Sample links already exist - see them at $APP/admin"

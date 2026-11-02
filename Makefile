@@ -2,7 +2,7 @@
 
 # Default target
 help:
-	@echo "JFShare Backend - Development & Deployment Commands"
+	@echo "Jellyshare Backend - Development & Deployment Commands"
 	@echo ""
 	@echo "Local demo (app from this checkout + a test Jellyfin):"
 	@echo "  make demo-up     - Generate test media, set up Jellyfin, start everything"
@@ -69,7 +69,7 @@ backup-db:
 	scripts/backup-db.sh
 
 restore-db:
-	@test -n "$(FILE)" || (echo "usage: make restore-db FILE=.backups/jfshare-....sql.gz [TARGET=jfshare-db-dev]" && exit 1)
+	@test -n "$(FILE)" || (echo "usage: make restore-db FILE=.backups/jellyshare-....sql.gz [TARGET=jellyshare-db-dev]" && exit 1)
 	scripts/restore-db.sh "$(FILE)" $(TARGET)
 
 dev-shell:
@@ -93,7 +93,7 @@ prod-up:
 		echo "ERROR: .env file not found. Copy .env.example and configure it."; \
 		exit 1; \
 	fi
-	docker-compose pull jfshare
+	docker-compose pull jellyshare
 	docker-compose up -d
 	@echo ""
 	@echo "Production environment running at http://localhost:8097"
@@ -102,13 +102,13 @@ prod-down:
 	docker-compose down
 
 prod-logs:
-	docker-compose logs -f jfshare
+	docker-compose logs -f jellyshare
 
 # Local fallback when the GHCR package is not reachable from this host.
 # Normal upgrades use the pinned image and `make prod-up`.
 prod-rebuild:
-	docker build -t ghcr.io/melth-cmd/jellyfin-share-backend:0.3.0 .
-	docker-compose up -d jfshare
+	docker build -t ghcr.io/melth-cmd/jellyshare:0.3.0 .
+	docker-compose up -d jellyshare
 
 # =============================================================================
 # UTILITIES
@@ -124,7 +124,7 @@ generate-keys:
 clean:
 	docker-compose -f docker-compose.dev.yml down -v --remove-orphans 2>/dev/null || true
 	docker-compose down -v --remove-orphans 2>/dev/null || true
-	docker rmi jfshare:latest 2>/dev/null || true
+	docker rmi jellyshare:latest 2>/dev/null || true
 	@echo "Cleaned up containers and volumes"
 
 # =============================================================================
@@ -139,7 +139,7 @@ local-frontend:
 
 local-build:
 	cd web && npm install && npm run build
-	go build -o jfshare ./cmd/server
+	go build -o jellyshare ./cmd/server
 
 test:
 	go test -v ./...

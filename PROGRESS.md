@@ -5,10 +5,10 @@
 2026-11-01
 
 - Repo detached from upstream: fresh single-commit history, private
-  `melth-cmd/jellyfin-share-backend`, backups of the old `.git` kept outside the
+  `melth-cmd/jellyshare`, backups of the old `.git` kept outside the
   repo.
 - Rebranded module path, container image, Dockerfile label, README clone URL,
-  and footer links to `melth-cmd/jellyfin-share-backend`.
+  and footer links to `melth-cmd/jellyshare`.
 - Removed all companion plugin references.
 - Added `AGENTS.md`, `SPEC.md`, `PROGRESS.md`.
 - `go build ./...` and `go vet ./...` pass.
@@ -30,7 +30,7 @@
 - Mass actions work on explicitly selected rows: revoke or delete. There is no
   bulk edit; editing is per share. Delete is only allowed for inactive links.
 - Stale links are deleted after 365 days past expiry or revocation, adjustable
-  with `JFSHARE_SHARE_RETENTION_DAYS`.
+  with `JELLYSHARE_SHARE_RETENTION_DAYS`.
 
 ## Iterating without rebuilding the compose stack
 
@@ -57,11 +57,11 @@ talks to the real Jellyfin library. Picking a real film or series works in dev.
 
 - [x] Remap the dev backend to host port `8098` (container port stays `8097`) so
       it can run beside production.
-- [x] Make the Vite proxy target configurable: it follows `JFSHARE_PORT`
+- [x] Make the Vite proxy target configurable: it follows `JELLYSHARE_PORT`
       (8097 inside the dev container), and `VITE_API_TARGET` overrides it when
       Vite runs on the host.
-- [x] Add `scripts/sync-dev-db.sh`: dump `jfshare-db`, restore into
-      `jfshare-db-dev` (drop and recreate the public schema first).
+- [x] Add `scripts/sync-dev-db.sh`: dump `jellyshare-db`, restore into
+      `jellyshare-db-dev` (drop and recreate the public schema first).
 - [x] Add a `make dev-db-sync` target.
 - [x] Confirm air picks up Go changes and Vite picks up Svelte changes.
 
@@ -271,7 +271,7 @@ and reports skipped active ids. Verified live with three temporary shares:
 Expiry already makes a link dead; there is no need to also mark it revoked. The
 useful cleanup is deleting the row after it has been dead long enough.
 
-- [x] Add `JFSHARE_SHARE_RETENTION_DAYS`, default 365.
+- [x] Add `JELLYSHARE_SHARE_RETENTION_DAYS`, default 365.
 - [x] Replace the unused `CleanupExpiredShares` with
       `DeleteStaleShares(ctx, retention)`: delete where `expires_at` or
       `revoked_at` is older than the cutoff. Never-expiring, non-revoked links
@@ -283,7 +283,7 @@ useful cleanup is deleting the row after it has been dead long enough.
 Done when: an old expired or revoked link disappears after the retention
 window, while live and never-expiring links stay.
 
-Status: done. `JFSHARE_SHARE_RETENTION_DAYS` defaults to 365 and `0` disables
+Status: done. `JELLYSHARE_SHARE_RETENTION_DAYS` defaults to 365 and `0` disables
 cleanup. `DeleteStaleShares` replaces the unused `CleanupExpiredShares` and runs
 from the existing five-minute loop. Verified in the dev database: a link expired
 730 days ago and one revoked 730 days ago were deleted; a fresh link and a
@@ -333,7 +333,7 @@ pass.
 ### 0.1.1 — operations and hardening
 
 **Database backup and restore**
-- Add `scripts/backup-db.sh`: `pg_dump` from `jfshare-db`, timestamped and
+- Add `scripts/backup-db.sh`: `pg_dump` from `jellyshare-db`, timestamped and
   compressed, with a retention count.
 - Add `scripts/restore-db.sh` and a systemd timer/cron example.
 - Restore a dump into the dev database as the test, not just checking that the
@@ -560,7 +560,7 @@ pass.
   exposure, secret generation, GHCR auth, verification headers, upgrades and
   rollback, backups, key rotation, incident response, and monitoring; the README
   links it from the admin section.
-- Startup warnings #6 are done: `JFSHARE_ENV=production|development` (default
+- Startup warnings #6 are done: `JELLYSHARE_ENV=production|development` (default
   production) controls non-fatal warnings for a short admin key, a non-HTTPS
   public URL, and the default database password. Warnings never print secret
   values; tests cover production, development, safe config, and unknown values.
@@ -612,7 +612,7 @@ pass.
   live for film, series, season, episode and duplicate, plus an old token still
   returning 200.
 - #13 done: the picker remembers the last chosen item and the last eight shared
-  items in `localStorage` (`jfshare:last-item`, `jfshare:recent-items`). When
+  items in `localStorage` (`jellyshare:last-item`, `jellyshare:recent-items`). When
   the search box is empty, a Recent section shows them with a Last badge and a
   Clear action; choosing one fills the form as usual. The series-first tree and
   Jellyfin search are unchanged. Verified in jsdom: recents render, choosing

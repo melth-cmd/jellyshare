@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
-	"github.com/melth-cmd/jellyfin-share-backend/internal/models"
+	"github.com/melth-cmd/jellyshare/internal/models"
 )
 
 func (db *DB) CreateShare(ctx context.Context, share *models.Share) error {

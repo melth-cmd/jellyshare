@@ -1,4 +1,4 @@
-# Design — Jellyfin Share
+# Design — Jellyshare
 
 A locked design system for this app. Every page redesign reads this file before
 emitting code. Do not regenerate per page — extend or amend this file when the
@@ -220,7 +220,7 @@ signal that playback is local.
 
 ## What pages MUST share
 
-- The wordmark: the mark from the logo set, then the words "Jellyfin Share" in
+- The wordmark: the mark from the logo set, then the words "Jellyshare" in
   `--font-display` at `--text-md`. The mark is `BrandMark.svelte` — the small
   cut, drawn in `--color-ink`, `--color-ink-2` and `--color-accent` rather than
   loaded as a file, sized `1.1em` with `--space-sm` before the words. It is
@@ -249,7 +249,7 @@ signal that playback is local.
   are stated once, in the terms block); **N5 floating pill** on the admin
   surface.
 - Footer archetype, same rule:
-  **Ft2 inline single line** on viewer pages ("Shared via Jellyfin Share", in
+  **Ft2 inline single line** on viewer pages ("Shared via Jellyshare", in
   the body face); **Ft4 dense colophon** on admin.
 - Column count and label-row presence in the index, by viewport.
 

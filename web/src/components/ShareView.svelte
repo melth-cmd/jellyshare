@@ -547,7 +547,7 @@
 
   // While casting, the receiver plays and the Player component is never mounted,
   // so nothing is sending heartbeats. Without them the session goes stale after
-  // JFSHARE_SESSION_HEARTBEAT_TIMEOUT_SECONDS - two minutes by default - and the
+  // JELLYSHARE_SESSION_HEARTBEAT_TIMEOUT_SECONDS - two minutes by default - and the
   // stream proxy starts answering 403, killing playback mid-show.
   function startCastHeartbeat(sessionId) {
     stopCastHeartbeat();
@@ -1092,7 +1092,7 @@
 
   $: foldImage = shareInfo.backdropUrl || shareInfo.posterUrl || '';
 </script>
-<svelte:head><title>{[displayTitle, subTitle].filter(Boolean).join(' · ')} · Jellyfin Share</title></svelte:head>
+<svelte:head><title>{[displayTitle, subTitle].filter(Boolean).join(' · ')} · Jellyshare</title></svelte:head>
 <svelte:document on:visibilitychange={handleVisibility} />
 
 <main>
@@ -1124,7 +1124,7 @@
       <!-- N9 · Edge-aligned minimal: the wordmark alone. The terms are stated
            once, in the headline above the controls. -->
       <header class="nav">
-        <span class="wordmark"><BrandMark />Jellyfin Share</span>
+        <span class="wordmark"><BrandMark />Jellyshare</span>
       </header>
 
       <div class="plate">
@@ -1598,7 +1598,7 @@
 {#if !playerOpen}
   <footer class="foot">
     <p>
-      Shared via <a class="foot-link" href="https://github.com/melth-cmd/jellyfin-share-backend" target="_blank" rel="noopener noreferrer">Jellyfin Share</a>
+      Shared via <a class="foot-link" href="https://github.com/melth-cmd/jellyshare" target="_blank" rel="noopener noreferrer">Jellyshare</a>
     </p>
   </footer>
 {/if}

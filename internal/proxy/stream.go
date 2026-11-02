@@ -12,12 +12,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/melth-cmd/jellyfin-share-backend/internal/config"
-	"github.com/melth-cmd/jellyfin-share-backend/internal/database"
-	"github.com/melth-cmd/jellyfin-share-backend/internal/download"
-	"github.com/melth-cmd/jellyfin-share-backend/internal/jellyfin"
-	"github.com/melth-cmd/jellyfin-share-backend/internal/middleware"
-	"github.com/melth-cmd/jellyfin-share-backend/internal/models"
+	"github.com/melth-cmd/jellyshare/internal/config"
+	"github.com/melth-cmd/jellyshare/internal/database"
+	"github.com/melth-cmd/jellyshare/internal/download"
+	"github.com/melth-cmd/jellyshare/internal/jellyfin"
+	"github.com/melth-cmd/jellyshare/internal/middleware"
+	"github.com/melth-cmd/jellyshare/internal/models"
 )
 
 type StreamProxy struct {
@@ -199,9 +199,9 @@ func (p *StreamProxy) buildJellyfinStreamURL(itemID, path, query string, session
 			// Scoping the identity to the session makes each playback its own
 			// device, so there is no job to inherit. It also stops two viewers of
 			// the same share sharing one device identity on the Jellyfin side.
-			deviceID := "jfshare-backend"
+			deviceID := "jellyshare-backend"
 			if session != nil {
-				deviceID = "jfshare-" + session.ID.String()
+				deviceID = "jellyshare-" + session.ID.String()
 			}
 			params.Set("DeviceId", deviceID)
 			return baseURL + "/Videos/" + itemID + "/master.m3u8?" + params.Encode()

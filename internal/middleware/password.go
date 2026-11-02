@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	ShareSessionCookieName = "jfshare_session"
+	ShareSessionCookieName = "jellyshare_session"
 	cookieMaxAge           = 24 * time.Hour
 )
 

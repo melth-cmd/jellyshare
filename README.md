@@ -2,14 +2,14 @@
   <img src="web/public/brand/icon-512.png" alt="" width="112">
 </p>
 
-<h1 align="center">Jellyfin Share</h1>
+<h1 align="center">Jellyshare</h1>
 
 <p align="center">
   Temporary, limited links to a film, an episode, a season or a whole series on
   your Jellyfin server, for people who have no account on it.
 </p>
 
-> **A note on AI:** Jellyfin Share is developed by a human with AI assistance
+> **A note on AI:** Jellyshare is developed by a human with AI assistance
 > (mostly Claude Code) helping write, refactor and review code. It's not "vibe
 > coded" or auto-generated: every change is reviewed, tested against a live
 > Jellyfin and shipped intentionally. That said, I'm all in on AI as a
@@ -144,8 +144,8 @@ episode summaries in them under
 ### 1. Clone and Configure
 
 ```bash
-git clone https://github.com/melth-cmd/jellyfin-share-backend.git
-cd jellyfin-share-backend
+git clone https://github.com/melth-cmd/jellyshare.git
+cd jellyshare
 
 # Copy example environment file
 cp .env.example .env
@@ -179,7 +179,7 @@ authenticate once with a token that can read packages, then pull:
 gh auth refresh -s read:packages
 gh auth token | docker login ghcr.io -u melth-cmd --password-stdin
 
-docker compose pull jfshare
+docker compose pull jellyshare
 docker compose up -d
 ```
 
@@ -187,7 +187,7 @@ If this host cannot authenticate to GHCR, build the same tag locally from the
 checked-out release instead:
 
 ```bash
-docker build -t ghcr.io/melth-cmd/jellyfin-share-backend:0.3.0 .
+docker build -t ghcr.io/melth-cmd/jellyshare:0.3.0 .
 docker compose up -d
 ```
 
@@ -222,21 +222,21 @@ Before exposing the service to the internet, follow
 
 | Environment Variable | Description | Default |
 |---------------------|-------------|---------|
-| `JFSHARE_PORT` | Server port | `8097` |
-| `JFSHARE_ENV` | `production` (default) or `development`. Development suppresses the non-fatal production warnings | `production` |
-| `JFSHARE_JELLYFIN_BASE_URL` | Jellyfin server URL | Required |
-| `JFSHARE_JELLYFIN_API_KEY` | Jellyfin API key | Required |
-| `JFSHARE_BACKEND_API_KEY` | Admin API key | Required |
-| `JFSHARE_PUBLIC_BASE_URL` | Public URL for share links | Required |
-| `JFSHARE_DB_DSN` | PostgreSQL connection string | Required |
-| `JFSHARE_SESSION_HEARTBEAT_TIMEOUT_SECONDS` | Session timeout | `120` |
-| `JFSHARE_RATE_LIMIT_REQUESTS` | Public API calls allowed per IP per window; images and stream segments have their own limit, ten times this | `100` |
-| `JFSHARE_RATE_LIMIT_WINDOW_SECONDS` | Rate limit window | `60` |
-| `JFSHARE_MAX_TRANSCODE_BITRATE` | Upper bound for a transcode target, in bits per second. Only applies when Jellyfin transcodes; direct stream is unaffected | `20000000` |
-| `JFSHARE_STREAM_VIDEO_CODEC` | Fallback video codec, used when the viewer's browser cannot decode the source. A source that already matches is stream-copied, not re-encoded. Empty sends no preference, which lets AV1/HEVC reach the browser untouched | `h264` |
-| `JFSHARE_STREAM_AUDIO_CODEC` | Audio codec the share page can play, same rule | `aac` |
-| `JFSHARE_ALLOW_DOWNLOADS` | Offer downloads of the original file, and of a season or series as one ZIP. Each download counts as one play | `true` |
-| `JFSHARE_SHARE_RETENTION_DAYS` | Days after a link expired or was revoked before its row is deleted. Live and never-expiring links are never deleted. `0` keeps stale rows forever | `365` |
+| `JELLYSHARE_PORT` | Server port | `8097` |
+| `JELLYSHARE_ENV` | `production` (default) or `development`. Development suppresses the non-fatal production warnings | `production` |
+| `JELLYSHARE_JELLYFIN_BASE_URL` | Jellyfin server URL | Required |
+| `JELLYSHARE_JELLYFIN_API_KEY` | Jellyfin API key | Required |
+| `JELLYSHARE_BACKEND_API_KEY` | Admin API key | Required |
+| `JELLYSHARE_PUBLIC_BASE_URL` | Public URL for share links | Required |
+| `JELLYSHARE_DB_DSN` | PostgreSQL connection string | Required |
+| `JELLYSHARE_SESSION_HEARTBEAT_TIMEOUT_SECONDS` | Session timeout | `120` |
+| `JELLYSHARE_RATE_LIMIT_REQUESTS` | Public API calls allowed per IP per window; images and stream segments have their own limit, ten times this | `100` |
+| `JELLYSHARE_RATE_LIMIT_WINDOW_SECONDS` | Rate limit window | `60` |
+| `JELLYSHARE_MAX_TRANSCODE_BITRATE` | Upper bound for a transcode target, in bits per second. Only applies when Jellyfin transcodes; direct stream is unaffected | `20000000` |
+| `JELLYSHARE_STREAM_VIDEO_CODEC` | Fallback video codec, used when the viewer's browser cannot decode the source. A source that already matches is stream-copied, not re-encoded. Empty sends no preference, which lets AV1/HEVC reach the browser untouched | `h264` |
+| `JELLYSHARE_STREAM_AUDIO_CODEC` | Audio codec the share page can play, same rule | `aac` |
+| `JELLYSHARE_ALLOW_DOWNLOADS` | Offer downloads of the original file, and of a season or series as one ZIP. Each download counts as one play | `true` |
+| `JELLYSHARE_SHARE_RETENTION_DAYS` | Days after a link expired or was revoked before its row is deleted. Live and never-expiring links are never deleted. `0` keeps stale rows forever | `365` |
 
 ## Backups
 
@@ -263,10 +263,10 @@ off.
 
 ```bash
 mkdir -p ~/.config/systemd/user
-cp scripts/systemd/jfshare-backup.service scripts/systemd/jfshare-backup.timer ~/.config/systemd/user/
+cp scripts/systemd/jellyshare-backup.service scripts/systemd/jellyshare-backup.timer ~/.config/systemd/user/
 systemctl --user daemon-reload
-systemctl --user enable --now jfshare-backup.timer
-systemctl --user list-timers jfshare-backup.timer
+systemctl --user enable --now jellyshare-backup.timer
+systemctl --user list-timers jellyshare-backup.timer
 ```
 
 A user timer keeps running after logout only when lingering is enabled
@@ -276,18 +276,18 @@ A user timer keeps running after logout only when lingering is enabled
 
 ```bash
 # Restore into the dev database (the safe default)
-make restore-db FILE=.backups/jfshare-20261102T050239Z.sql.gz
+make restore-db FILE=.backups/jellyshare-20261102T050239Z.sql.gz
 
 # Restore production only when you mean it
-docker compose stop jfshare
-FORCE_PRODUCTION=1 scripts/restore-db.sh .backups/jfshare-20261102T050239Z.sql.gz jfshare-db
-docker compose start jfshare
+docker compose stop jellyshare
+FORCE_PRODUCTION=1 scripts/restore-db.sh .backups/jellyshare-20261102T050239Z.sql.gz jellyshare-db
+docker compose start jellyshare
 ```
 
 The restore drops and recreates the target's `public` schema, then loads the
 dump. Stop the app first when restoring production; its open connections are
 terminated and it should reconnect after the restore completes. The dev target
-defaults to `jfshare-db-dev`.
+defaults to `jellyshare-db-dev`.
 
 ## Upgrading
 
@@ -298,7 +298,7 @@ Releases are pinned in `docker-compose.yml`; production never follows `latest`.
 make backup-db
 
 # 2. Change the image tag in docker-compose.yml to the new release, then
-docker compose pull jfshare
+docker compose pull jellyshare
 docker compose up -d
 
 # 3. Check it came up and a link still opens
@@ -340,7 +340,7 @@ X-Backend-Key: your-api-key
 
 `expiresInMinutes` defaults to 30 days when omitted. `allowDownload` defaults to
 `true` when omitted, so a client that predates it keeps offering downloads;
-`JFSHARE_ALLOW_DOWNLOADS=false` overrides it for every share. `jellyfinUserId` is
+`JELLYSHARE_ALLOW_DOWNLOADS=false` overrides it for every share. `jellyfinUserId` is
 optional: when omitted the backend uses the Jellyfin user it resolved at
 startup, which is what the admin page does.
 
@@ -695,7 +695,7 @@ that matters to you.
 
 ```bash
 # Build production Docker image
-docker build -t jellyfin-share .
+docker build -t jellyshare .
 
 # Build frontend only
 cd web && npm run build
@@ -709,7 +709,7 @@ cd web && npm run build
 - **Rate limiting** - Public endpoints are rate-limited to prevent abuse
 - **IP hashing** - Client IPs are hashed for privacy in audit logs
 - **Automatic session cleanup** - Stale sessions are automatically terminated; links
-  are deleted after `JFSHARE_SHARE_RETENTION_DAYS` days once expired or revoked
+  are deleted after `JELLYSHARE_SHARE_RETENTION_DAYS` days once expired or revoked
 - **Password changes invalidate unlocks** - An unlock cookie is bound to the
   password hash it was issued for, so changing the password asks every viewer
   again instead of leaving old cookies valid
@@ -788,7 +788,7 @@ Jellyfin before being fixed; the numbers are measured.
   has episodes — one play buys at most one pass through the series.
 
   Both need the page served over **HTTPS** — browsers dropped the Presentation API
-  on plain HTTP — and `JFSHARE_PUBLIC_BASE_URL` must be an address the receiving
+  on plain HTTP — and `JELLYSHARE_PUBLIC_BASE_URL` must be an address the receiving
   device can reach, since it fetches the stream itself rather than relaying it
   through the browser. The Cast button is hidden on an insecure origin, with one
   exception: browsers treat `localhost` as secure, so it appears there and then
@@ -840,7 +840,7 @@ Jellyfin before being fixed; the numbers are measured.
 - Series shares listed seasons and could not play any of them.
 - Share analytics always returned 500 — the query named a table and a column that
   do not exist.
-- `JFSHARE_PORT` was ignored by the healthcheck, leaving the container
+- `JELLYSHARE_PORT` was ignored by the healthcheck, leaving the container
   permanently unhealthy.
 - Shares can be created without an expiry.
 - Episode stills were linked from the episode list but never routed, so every

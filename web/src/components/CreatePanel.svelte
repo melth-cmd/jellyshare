@@ -2,6 +2,7 @@
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import PosterThumb from './PosterThumb.svelte';
   import { copyText } from '../clipboard.js';
+  import { migrateKey } from '../storage.js';
   import qrcode from 'qrcode-generator';
 
   export let apiKey;
@@ -40,8 +41,11 @@
 
   // Recents are a local convenience, not server state. They survive a reload
   // and are cleared by the admin, never by the backend.
-  const RECENT_KEY = 'jfshare:recent-items';
-  const LAST_KEY = 'jfshare:last-item';
+  migrateKey(localStorage, 'jfshare:recent-items', 'jellyshare:recent-items');
+  migrateKey(localStorage, 'jfshare:last-item', 'jellyshare:last-item');
+
+  const RECENT_KEY = 'jellyshare:recent-items';
+  const LAST_KEY = 'jellyshare:last-item';
   const RECENT_LIMIT = 8;
 
   let selectedItem = null;
@@ -429,7 +433,7 @@
   }
 
   async function copyDetails() {
-    const lines = ['Jellyfin Share', created.publicUrl];
+    const lines = ['Jellyshare', created.publicUrl];
     if (createdPassword) lines.push(`Password: ${createdPassword}`);
     lines.push(created.expiresAt ? `Expires: ${formatDate(created.expiresAt)}` : 'Never expires');
 

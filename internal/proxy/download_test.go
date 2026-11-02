@@ -3,7 +3,7 @@ package proxy
 import (
 	"testing"
 
-	"github.com/melth-cmd/jellyfin-share-backend/internal/jellyfin"
+	"github.com/melth-cmd/jellyshare/internal/jellyfin"
 )
 
 func TestWithFilesDropsMissingEpisodes(t *testing.T) {

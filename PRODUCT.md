@@ -62,12 +62,12 @@ These are in priority order. When two of them conflict, the higher one wins.
   limits, and a quality cap per share (1080p / 720p / 480p).
 - Downloads of the original file, or of a season or series as a ZIP filed by
   season. Each download counts as one play, and downloads can be turned off per
-  share or globally (`JFSHARE_ALLOW_DOWNLOADS`).
+  share or globally (`JELLYSHARE_ALLOW_DOWNLOADS`).
 - HLS proxied through the backend. Text subtitles are sent as a WebVTT sidecar.
   Resume position and watched state are kept on the server per link, so a
   viewer resumes on any device; everyone holding the same link shares them.
 - Session tracking. Revoking a link ends live sessions.
-- Stack: Go backend, Svelte 4 + Vite frontend in `web/`, hls.js. Brand tokens live
+- Stack: Go backend, Svelte 5 + Vite frontend in `web/`, hls.js. Brand tokens live
   in `web/src/tokens.css`.
 - UI copy is English only. No translation layer is planned.
 - Terms: a *share* / *link* is one handed-out grant. *Plays* are counted starts
@@ -75,7 +75,7 @@ These are in priority order. When two of them conflict, the higher one wins.
 
 ## Brand Commitments
 
-- The name is **Jellyfin Share**. The product is related to Jellyfin and anchored
+- The name is **Jellyshare**. The product is related to Jellyfin and anchored
   on Jellyfin's accent colour, but it is not an official Jellyfin product.
 - Voice: plain, specific and calm. Say the terms in words ("Nobody has opened this
   link yet.", "Set by whoever shared this"). No marketing tone, no exclamation

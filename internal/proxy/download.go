@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/melth-cmd/jellyfin-share-backend/internal/download"
-	"github.com/melth-cmd/jellyfin-share-backend/internal/jellyfin"
-	"github.com/melth-cmd/jellyfin-share-backend/internal/models"
+	"github.com/melth-cmd/jellyshare/internal/download"
+	"github.com/melth-cmd/jellyshare/internal/jellyfin"
+	"github.com/melth-cmd/jellyshare/internal/models"
 )
 
 // ServeDownload streams what a download ticket names. The ticket was issued

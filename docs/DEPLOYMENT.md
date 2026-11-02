@@ -1,6 +1,6 @@
 # Deployment checklist
 
-Use this before exposing Jellyfin Share to the internet, and again after a
+Use this before exposing Jellyshare to the internet, and again after a
 server move or key rotation. The app is designed to sit behind a TLS-terminating
 reverse proxy; it should never be the thing holding port 80/443 itself.
 
@@ -14,7 +14,7 @@ reverse proxy; it should never be the thing holding port 80/443 itself.
 - [ ] **Keys are generated, not copied from the example.**
       `openssl rand -hex 32` for `BACKEND_API_KEY`; a real
       `POSTGRES_PASSWORD`; a Jellyfin API key from the Jellyfin dashboard.
-- [ ] **`JFSHARE_ENV=production`** (the default) and
+- [ ] **`JELLYSHARE_ENV=production`** (the default) and
       **`PUBLIC_BASE_URL=https://...`** are set.
 - [ ] **The image is pinned** in `docker-compose.yml` to a release tag, not
       `latest`.
@@ -33,7 +33,7 @@ share.example.com {
 }
 ```
 
-If Caddy runs in the same Docker network as the app, proxy to `jfshare:8097`
+If Caddy runs in the same Docker network as the app, proxy to `jellyshare:8097`
 instead. Do not publish `8097` on the host.
 
 The backend trusts forwarded client addresses only when the request comes from a
@@ -44,11 +44,11 @@ A direct internet client cannot choose its own rate-limit bucket.
 
 ```bash
 gh auth token | docker login ghcr.io -u melth-cmd --password-stdin
-docker compose pull jfshare
+docker compose pull jellyshare
 docker compose up -d
 
 curl -fsS http://127.0.0.1:8097/health
-docker compose logs --tail=50 jfshare
+docker compose logs --tail=50 jellyshare
 ```
 
 Expected headers on the public URL:
@@ -71,7 +71,7 @@ revoke it. Keep the previous image tag ready for rollback.
 
 1. Run `make backup-db`.
 2. Change the pinned tag in `docker-compose.yml`.
-3. `docker compose pull jfshare && docker compose up -d`.
+3. `docker compose pull jellyshare && docker compose up -d`.
 4. Check `/health`, logs, and one real link.
 5. Roll back by restoring the previous tag, pulling, and bringing it up again.
 
@@ -80,9 +80,9 @@ one, it runs automatically at startup.
 
 ## Backups
 
-- `make backup-db` writes `.backups/jfshare-<timestamp>.sql.gz` and keeps five.
+- `make backup-db` writes `.backups/jellyshare-<timestamp>.sql.gz` and keeps five.
 - The user systemd timer runs nightly; confirm it with
-  `systemctl --user list-timers jfshare-backup.timer`.
+  `systemctl --user list-timers jellyshare-backup.timer`.
 - Copy `.backups/` off the host. The timer protects against bad upgrades and
   accidental deletes, not disk or host loss.
 - Test a restore into the dev database before relying on the dump.

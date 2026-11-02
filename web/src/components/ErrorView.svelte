@@ -59,11 +59,11 @@
     : errorMessages[error?.status] || errorMessages.default;
 </script>
 
-<svelte:head><title>{errorInfo.title} · Jellyfin Share</title></svelte:head>
+<svelte:head><title>{errorInfo.title} · Jellyshare</title></svelte:head>
 
 <div class="error bloom-ground">
   <header class="nav">
-    <span class="wordmark"><BrandMark />Jellyfin Share</span>
+    <span class="wordmark"><BrandMark />Jellyshare</span>
   </header>
 
   <main class="error__body">
@@ -73,7 +73,7 @@
   </main>
 
   <footer class="foot">
-    <p>Shared via <a class="foot-link" href="https://github.com/melth-cmd/jellyfin-share-backend" target="_blank" rel="noopener noreferrer">Jellyfin Share</a></p>
+    <p>Shared via <a class="foot-link" href="https://github.com/melth-cmd/jellyshare" target="_blank" rel="noopener noreferrer">Jellyshare</a></p>
   </footer>
 </div>
 

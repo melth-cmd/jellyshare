@@ -44,7 +44,7 @@
 
 <div class="login bloom-ground">
   <header class="nav">
-    <span class="wordmark"><BrandMark />Jellyfin Share</span>
+    <span class="wordmark"><BrandMark />Jellyshare</span>
     <span class="nav__status">admin</span>
   </header>
 
@@ -91,7 +91,7 @@
 
   <footer class="foot">
     <p class="foot__line">
-      <a class="foot-link" href="https://github.com/melth-cmd/jellyfin-share-backend" target="_blank" rel="noopener noreferrer">Jellyfin Share</a>
+      <a class="foot-link" href="https://github.com/melth-cmd/jellyshare" target="_blank" rel="noopener noreferrer">Jellyshare</a>
       · admin
     </p>
     <p class="foot__note">

@@ -7,7 +7,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: jfshare-dev
+    container_name: jellyshare-dev
     volumes:
       - .:/workspace:cached
       - go-mod-cache:/go/pkg/mod
@@ -19,14 +19,14 @@ services:
       - "${DEV_HOST_IP:-localhost}:8098:8097"
       - "${DEV_HOST_IP:-localhost}:5173:5173"
     environment:
-      - JFSHARE_ENV=development
-      - JFSHARE_PORT=8097
-      - JFSHARE_DB_DSN=postgres://jfshare:jfshare@postgres:5432/jfshare?sslmode=disable
-      - JFSHARE_JELLYFIN_BASE_URL=${JELLYFIN_URL:-http://host.docker.internal:8096}
-      - JFSHARE_JELLYFIN_API_KEY=${JELLYFIN_API_KEY:-your-api-key}
-      - JFSHARE_BACKEND_API_KEY=${BACKEND_API_KEY:-dev-backend-key-change-in-prod}
-      - JFSHARE_PUBLIC_BASE_URL=${DEV_PUBLIC_BASE_URL:-http://localhost:8098}
-      - JFSHARE_LOG_LEVEL=debug
+      - JELLYSHARE_ENV=development
+      - JELLYSHARE_PORT=8097
+      - JELLYSHARE_DB_DSN=postgres://jellyshare:jellyshare@postgres:5432/jellyshare?sslmode=disable
+      - JELLYSHARE_JELLYFIN_BASE_URL=${JELLYFIN_URL:-http://host.docker.internal:8096}
+      - JELLYSHARE_JELLYFIN_API_KEY=${JELLYFIN_API_KEY:-your-api-key}
+      - JELLYSHARE_BACKEND_API_KEY=${BACKEND_API_KEY:-dev-backend-key-change-in-prod}
+      - JELLYSHARE_PUBLIC_BASE_URL=${DEV_PUBLIC_BASE_URL:-http://localhost:8098}
+      - JELLYSHARE_LOG_LEVEL=debug
     depends_on:
       postgres:
         condition: service_healthy
@@ -38,17 +38,17 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    container_name: jfshare-db-dev
+    container_name: jellyshare-db-dev
     environment:
-      - POSTGRES_USER=jfshare
-      - POSTGRES_PASSWORD=jfshare
-      - POSTGRES_DB=jfshare
+      - POSTGRES_USER=jellyshare
+      - POSTGRES_PASSWORD=jellyshare
+      - POSTGRES_DB=jellyshare
     volumes:
       - postgres-dev-data:/var/lib/postgresql/data
     ports:
       - "5433:5432"  # Use 5433 externally to avoid conflicts
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U jfshare"]
+      test: ["CMD-SHELL", "pg_isready -U jellyshare"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -56,7 +56,7 @@ services:
   # Optional: pgAdmin for database management
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: jfshare-pgadmin
+    container_name: jellyshare-pgadmin
     environment:
       - PGADMIN_DEFAULT_EMAIL=admin@local.dev
       - PGADMIN_DEFAULT_PASSWORD=admin
