@@ -187,7 +187,7 @@ If this host cannot authenticate to GHCR, build the same tag locally from the
 checked-out release instead:
 
 ```bash
-docker build -t ghcr.io/melth-cmd/jellyfin-share-backend:0.1.0 .
+docker build -t ghcr.io/melth-cmd/jellyfin-share-backend:0.1.1 .
 docker compose up -d
 ```
 
@@ -209,11 +209,15 @@ The dashboard has two tabs:
 Links are owned by the first Jellyfin user the backend finds at startup. The
 create API accepts an explicit `jellyfinUserId` when another owner is needed.
 
+Before exposing the service to the internet, follow
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
 ## Configuration
 
 | Environment Variable | Description | Default |
 |---------------------|-------------|---------|
 | `JFSHARE_PORT` | Server port | `8097` |
+| `JFSHARE_ENV` | `production` (default) or `development`. Development suppresses the non-fatal production warnings | `production` |
 | `JFSHARE_JELLYFIN_BASE_URL` | Jellyfin server URL | Required |
 | `JFSHARE_JELLYFIN_API_KEY` | Jellyfin API key | Required |
 | `JFSHARE_BACKEND_API_KEY` | Admin API key | Required |

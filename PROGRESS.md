@@ -487,6 +487,17 @@ pass.
 - Steps 8 and 9 done: empty/error/disclosure copy polished, docs rewritten to
   match the built admin flow, and a scripted end-to-end pass covered movie,
   series, season, episode, password, play-limit, bulk, and cleanup paths.
+- Deployment checklist #5 is done: `docs/DEPLOYMENT.md` covers TLS/proxy, port
+  exposure, secret generation, GHCR auth, verification headers, upgrades and
+  rollback, backups, key rotation, incident response, and monitoring; the README
+  links it from the admin section.
+- Startup warnings #6 are done: `JFSHARE_ENV=production|development` (default
+  production) controls non-fatal warnings for a short admin key, a non-HTTPS
+  public URL, and the default database password. Warnings never print secret
+  values; tests cover production, development, safe config, and unknown values.
+- v0.1.1 prep: compose and the local-build fallback pin `0.1.1`, the frontend
+  package version is 0.1.1, and a local production image build completed with
+  the Go 1.27 Dockerfile.
 - CI security work for #4 is done: `go vet`, `govulncheck` (pinned v1.9.0), and
   `npm audit --audit-level=high` now run in GitHub Actions on pushes, PRs, and a
   weekly schedule; actions are pinned to SHAs and Dependabot watches Go, npm,

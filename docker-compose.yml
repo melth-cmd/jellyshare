@@ -7,12 +7,13 @@ version: '3.8'
 
 services:
   jfshare:
-    image: ghcr.io/melth-cmd/jellyfin-share-backend:0.1.0
+    image: ghcr.io/melth-cmd/jellyfin-share-backend:0.1.1
     container_name: jfshare
     restart: unless-stopped
     ports:
       - "8097:8097"
     environment:
+      - JFSHARE_ENV=production
       - JFSHARE_PORT=8097
       - JFSHARE_DB_DSN=postgres://jfshare:${POSTGRES_PASSWORD:-jfshare}@postgres:5432/jfshare?sslmode=disable
       - JFSHARE_JELLYFIN_BASE_URL=${JELLYFIN_URL}
