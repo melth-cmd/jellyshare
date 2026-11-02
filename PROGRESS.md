@@ -631,3 +631,8 @@ pass.
   new 0.5.0 milestone so the rename lands first.
 - Prepared `v0.3.0`: version references in the compose file, Makefile, README
   and frontend package bumped to `0.3.0`.
+- **v0.3.0 released and deployed** (`e33194a` + tag): readable share URLs, Thai
+  subtitle default, picker recents, and the deferred-items review. Image digest
+  `sha256:89c339ad6609f452f25b1b3ce6d423bdfe8bb0b8a731a3b5c82667d92b1f4693`;
+  production is healthy on `0.3.0`, and an old 24-hex token still returns 200.
+  The 0.3.0 milestone is closed.
