@@ -6,9 +6,9 @@ tmp_dir = "tmp"
 
 [build]
   # Command to build the project
-  cmd = "go build -buildvcs=false -o ./tmp/jfshare ./cmd/server"
+  cmd = "go build -buildvcs=false -o ./tmp/jellyshare ./cmd/server"
   # Binary file
-  bin = "./tmp/jfshare"
+  bin = "./tmp/jellyshare"
   # Watch these extensions
   include_ext = ["go", "tpl", "tmpl", "html", "sql"]
   # Exclude directories

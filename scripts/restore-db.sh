@@ -3,19 +3,19 @@
 #
 # Usage: scripts/restore-db.sh <dump.sql.gz> [target-container]
 #
-# The target defaults to the dev database, jfshare-db-dev. Restoring into the
+# The target defaults to the dev database, jellyshare-db-dev. Restoring into the
 # production container requires FORCE_PRODUCTION=1 because it replaces live data.
 set -euo pipefail
 
 if [ $# -lt 1 ] || [ $# -gt 2 ]; then
   echo "usage: $0 <dump.sql.gz> [target-container]" >&2
-  echo "  target defaults to jfshare-db-dev" >&2
+  echo "  target defaults to jellyshare-db-dev" >&2
   exit 1
 fi
 
 DUMP="$1"
-TARGET="${2:-jfshare-db-dev}"
-PRODUCTION_CONTAINER="${PRODUCTION_CONTAINER:-jfshare-db}"
+TARGET="${2:-jellyshare-db-dev}"
+PRODUCTION_CONTAINER="${PRODUCTION_CONTAINER:-jellyshare-db}"
 
 if [ ! -f "$DUMP" ]; then
   echo "error: dump not found: $DUMP" >&2

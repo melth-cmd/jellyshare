@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/melth-cmd/jellyfin-share-backend/internal/models"
+	"github.com/melth-cmd/jellyshare/internal/models"
 )
 
 func (db *DB) CreateSession(ctx context.Context, session *models.ShareSession) error {

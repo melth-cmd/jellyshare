@@ -94,7 +94,7 @@ Matches `models.CreateShareRequest`:
 ## Retention
 
 - Links are deleted once they have been expired or revoked for longer than
-  `JFSHARE_SHARE_RETENTION_DAYS` (default 365; `0` disables cleanup).
+  `JELLYSHARE_SHARE_RETENTION_DAYS` (default 365; `0` disables cleanup).
 - Live links and links that never expire are never deleted.
 
 ## Validation and errors

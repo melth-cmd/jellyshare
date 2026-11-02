@@ -4,11 +4,14 @@
   import AnalyticsPanel from './AnalyticsPanel.svelte';
   import EditShareDialog from './EditShareDialog.svelte';
   import { copyText } from '../clipboard.js';
+  import { migrateKey } from '../storage.js';
   import { onMount, tick, createEventDispatcher } from 'svelte';
 
   export let apiKey;
 
-  const TAB_KEY = 'jfshare_admin_tab';
+  migrateKey(sessionStorage, 'jfshare_admin_tab', 'jellyshare_admin_tab');
+
+  const TAB_KEY = 'jellyshare_admin_tab';
   let activeTab = 'shares';
   let createPanel;
   let analyticsPanel;
@@ -425,7 +428,7 @@
 
 <!-- N5 · Floating pill. Content-sized, visibly detached, blurred over the canvas. -->
 <nav class="pill" aria-label="Admin">
-  <span class="pill__wordmark"><BrandMark /><span class="pill__name">Jellyfin Share</span></span>
+  <span class="pill__wordmark"><BrandMark /><span class="pill__name">Jellyshare</span></span>
   <span class="pill__count" aria-live="polite">{total} {total === 1 ? 'link' : 'links'}</span>
   <div class="pill__tabs" role="tablist" aria-label="Admin sections">
     <button
@@ -676,7 +679,7 @@
   <!-- Ft4 · Dense colophon -->
   <footer class="colophon">
     <p class="colophon__line">
-      <a class="foot-link" href="https://github.com/melth-cmd/jellyfin-share-backend" target="_blank" rel="noopener noreferrer">Jellyfin Share</a>
+      <a class="foot-link" href="https://github.com/melth-cmd/jellyshare" target="_blank" rel="noopener noreferrer">Jellyshare</a>
       · admin · {counts.all} indexed, {counts.active} live
     </p>
     <p class="colophon__note">

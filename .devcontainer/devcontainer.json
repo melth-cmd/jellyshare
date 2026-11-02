@@ -1,5 +1,5 @@
 {
-  "name": "JFShare Backend",
+  "name": "Jellyshare",
   "dockerComposeFile": "../docker-compose.dev.yml",
   "service": "dev",
   "workspaceFolder": "/workspace",

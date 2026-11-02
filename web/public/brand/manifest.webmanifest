@@ -1,6 +1,6 @@
 {
-  "name": "Jellyfin Share",
-  "short_name": "Jellyfin Share",
+  "name": "Jellyshare",
+  "short_name": "Jellyshare",
   "background_color": "#060d11",
   "theme_color": "#060d11",
   "display": "standalone",

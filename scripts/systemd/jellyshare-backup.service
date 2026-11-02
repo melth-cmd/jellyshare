@@ -1,0 +1,9 @@
+[Unit]
+Description=Back up the Jellyshare database
+
+[Service]
+Type=oneshot
+WorkingDirectory=/mnt/HUB1/jellyfin/jellyshare
+ExecStart=/mnt/HUB1/jellyfin/jellyshare/scripts/backup-db.sh
+Nice=10
+IOSchedulingClass=idle

@@ -1,19 +1,22 @@
 <script>
   import AdminLogin from './AdminLogin.svelte';
   import AdminDashboard from './AdminDashboard.svelte';
+  import { migrateKey } from '../storage.js';
 
-  let apiKey = localStorage.getItem('jfshare_admin_key') || '';
+  migrateKey(localStorage, 'jfshare_admin_key', 'jellyshare_admin_key');
+
+  let apiKey = localStorage.getItem('jellyshare_admin_key') || '';
   let isLoggedIn = !!apiKey;
 
   function handleLogin(event) {
     apiKey = event.detail.apiKey;
-    localStorage.setItem('jfshare_admin_key', apiKey);
+    localStorage.setItem('jellyshare_admin_key', apiKey);
     isLoggedIn = true;
   }
 
   function handleLogout() {
     apiKey = '';
-    localStorage.removeItem('jfshare_admin_key');
+    localStorage.removeItem('jellyshare_admin_key');
     isLoggedIn = false;
   }
 </script>

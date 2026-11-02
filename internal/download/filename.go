@@ -6,7 +6,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/melth-cmd/jellyfin-share-backend/internal/jellyfin"
+	"github.com/melth-cmd/jellyshare/internal/jellyfin"
 )
 
 // FileName names a downloaded item the way a media library would file it:

@@ -39,22 +39,22 @@ type Config struct {
 
 func Load() *Config {
 	return &Config{
-		Environment:             getEnv("JFSHARE_ENV", "production"),
-		Port:                    getEnvInt("JFSHARE_PORT", 8097),
-		DatabaseDSN:             getEnv("JFSHARE_DB_DSN", "postgres://jfshare:jfshare@localhost:5432/jfshare?sslmode=disable"),
-		JellyfinBaseURL:         getEnv("JFSHARE_JELLYFIN_BASE_URL", "http://localhost:8096"),
-		JellyfinAPIKey:          getEnv("JFSHARE_JELLYFIN_API_KEY", ""),
-		BackendAPIKey:           getEnv("JFSHARE_BACKEND_API_KEY", ""),
-		PublicBaseURL:           getEnv("JFSHARE_PUBLIC_BASE_URL", "http://localhost:8097"),
-		SessionHeartbeatTimeout: time.Duration(getEnvInt("JFSHARE_SESSION_HEARTBEAT_TIMEOUT_SECONDS", 120)) * time.Second,
-		LogLevel:                getEnv("JFSHARE_LOG_LEVEL", "info"),
-		RateLimitRequests:       getEnvInt("JFSHARE_RATE_LIMIT_REQUESTS", 100),
-		RateLimitWindow:         time.Duration(getEnvInt("JFSHARE_RATE_LIMIT_WINDOW_SECONDS", 60)) * time.Second,
-		MaxTranscodeBitrate:     getEnvInt("JFSHARE_MAX_TRANSCODE_BITRATE", 20000000),
-		StreamVideoCodec:        getEnvAllowEmpty("JFSHARE_STREAM_VIDEO_CODEC", "h264"),
-		StreamAudioCodec:        getEnvAllowEmpty("JFSHARE_STREAM_AUDIO_CODEC", "aac"),
-		AllowDownloads:          getEnvBool("JFSHARE_ALLOW_DOWNLOADS", true),
-		ShareRetentionDays:      getEnvInt("JFSHARE_SHARE_RETENTION_DAYS", 365),
+		Environment:             getEnv("JELLYSHARE_ENV", "production"),
+		Port:                    getEnvInt("JELLYSHARE_PORT", 8097),
+		DatabaseDSN:             getEnv("JELLYSHARE_DB_DSN", "postgres://jellyshare:jellyshare@localhost:5432/jellyshare?sslmode=disable"),
+		JellyfinBaseURL:         getEnv("JELLYSHARE_JELLYFIN_BASE_URL", "http://localhost:8096"),
+		JellyfinAPIKey:          getEnv("JELLYSHARE_JELLYFIN_API_KEY", ""),
+		BackendAPIKey:           getEnv("JELLYSHARE_BACKEND_API_KEY", ""),
+		PublicBaseURL:           getEnv("JELLYSHARE_PUBLIC_BASE_URL", "http://localhost:8097"),
+		SessionHeartbeatTimeout: time.Duration(getEnvInt("JELLYSHARE_SESSION_HEARTBEAT_TIMEOUT_SECONDS", 120)) * time.Second,
+		LogLevel:                getEnv("JELLYSHARE_LOG_LEVEL", "info"),
+		RateLimitRequests:       getEnvInt("JELLYSHARE_RATE_LIMIT_REQUESTS", 100),
+		RateLimitWindow:         time.Duration(getEnvInt("JELLYSHARE_RATE_LIMIT_WINDOW_SECONDS", 60)) * time.Second,
+		MaxTranscodeBitrate:     getEnvInt("JELLYSHARE_MAX_TRANSCODE_BITRATE", 20000000),
+		StreamVideoCodec:        getEnvAllowEmpty("JELLYSHARE_STREAM_VIDEO_CODEC", "h264"),
+		StreamAudioCodec:        getEnvAllowEmpty("JELLYSHARE_STREAM_AUDIO_CODEC", "aac"),
+		AllowDownloads:          getEnvBool("JELLYSHARE_ALLOW_DOWNLOADS", true),
+		ShareRetentionDays:      getEnvInt("JELLYSHARE_SHARE_RETENTION_DAYS", 365),
 	}
 }
 
@@ -73,16 +73,16 @@ func (c *Config) Warnings() []string {
 
 	warnings := []string{}
 	if len(c.BackendAPIKey) < 32 {
-		warnings = append(warnings, "JFSHARE_BACKEND_API_KEY is shorter than 32 bytes; generate one with: openssl rand -hex 32")
+		warnings = append(warnings, "JELLYSHARE_BACKEND_API_KEY is shorter than 32 bytes; generate one with: openssl rand -hex 32")
 	}
 	if !strings.HasPrefix(strings.ToLower(c.PublicBaseURL), "https://") {
-		warnings = append(warnings, "JFSHARE_PUBLIC_BASE_URL is not HTTPS; public links and the admin key will travel in clear text")
+		warnings = append(warnings, "JELLYSHARE_PUBLIC_BASE_URL is not HTTPS; public links and the admin key will travel in clear text")
 	}
-	if strings.Contains(c.DatabaseDSN, "jfshare:jfshare@") {
-		warnings = append(warnings, "the database connection still uses the default jfshare:jfshare password")
+	if strings.Contains(c.DatabaseDSN, "jellyshare:jellyshare@") {
+		warnings = append(warnings, "the database connection still uses the default jellyshare:jellyshare password")
 	}
 	if !strings.EqualFold(c.Environment, "production") && !strings.EqualFold(c.Environment, "development") {
-		warnings = append(warnings, "JFSHARE_ENV is not 'production' or 'development'; treating it as production")
+		warnings = append(warnings, "JELLYSHARE_ENV is not 'production' or 'development'; treating it as production")
 	}
 	return warnings
 }

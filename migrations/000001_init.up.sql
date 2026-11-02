@@ -1,4 +1,4 @@
--- Initial schema for jellyfin-share-backend
+-- Initial schema for jellyshare
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 

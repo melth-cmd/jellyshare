@@ -36,7 +36,7 @@ make dev-db-sync
 
 # Database backups (writes .backups/, keeps five)
 make backup-db
-make restore-db FILE=.backups/jfshare-....sql.gz
+make restore-db FILE=.backups/jellyshare-....sql.gz
 
 # Local demo with a throwaway Jellyfin
 make demo-up

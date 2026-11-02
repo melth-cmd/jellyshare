@@ -1,5 +1,5 @@
 [Unit]
-Description=Nightly Jellyfin Share database backup
+Description=Nightly Jellyshare database backup
 
 [Timer]
 OnCalendar=*-*-* 03:30:00

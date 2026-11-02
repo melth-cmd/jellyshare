@@ -6,52 +6,52 @@ version: '3.8'
 # =============================================================================
 
 services:
-  jfshare:
-    image: ghcr.io/melth-cmd/jellyfin-share-backend:0.3.0
-    container_name: jfshare
+  jellyshare:
+    image: ghcr.io/melth-cmd/jellyshare:0.3.0
+    container_name: jellyshare
     restart: unless-stopped
     ports:
       - "8097:8097"
     environment:
-      - JFSHARE_ENV=production
-      - JFSHARE_PORT=8097
-      - JFSHARE_DB_DSN=postgres://jfshare:${POSTGRES_PASSWORD:-jfshare}@postgres:5432/jfshare?sslmode=disable
-      - JFSHARE_JELLYFIN_BASE_URL=${JELLYFIN_URL}
-      - JFSHARE_JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
-      - JFSHARE_BACKEND_API_KEY=${BACKEND_API_KEY}
-      - JFSHARE_PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-http://localhost:8097}
-      - JFSHARE_SESSION_HEARTBEAT_TIMEOUT_SECONDS=120
-      - JFSHARE_LOG_LEVEL=info
+      - JELLYSHARE_ENV=production
+      - JELLYSHARE_PORT=8097
+      - JELLYSHARE_DB_DSN=postgres://jellyshare:${POSTGRES_PASSWORD:-jellyshare}@postgres:5432/jellyshare?sslmode=disable
+      - JELLYSHARE_JELLYFIN_BASE_URL=${JELLYFIN_URL}
+      - JELLYSHARE_JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
+      - JELLYSHARE_BACKEND_API_KEY=${BACKEND_API_KEY}
+      - JELLYSHARE_PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-http://localhost:8097}
+      - JELLYSHARE_SESSION_HEARTBEAT_TIMEOUT_SECONDS=120
+      - JELLYSHARE_LOG_LEVEL=info
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - jfshare-network
+      - jellyshare-network
     # Uncomment if Jellyfin runs on host
     # extra_hosts:
     #   - "host.docker.internal:host-gateway"
 
   postgres:
     image: postgres:16-alpine
-    container_name: jfshare-db
+    container_name: jellyshare-db
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=jfshare
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-jfshare}
-      - POSTGRES_DB=jfshare
+      - POSTGRES_USER=jellyshare
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-jellyshare}
+      - POSTGRES_DB=jellyshare
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U jfshare"]
+      test: ["CMD-SHELL", "pg_isready -U jellyshare"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - jfshare-network
+      - jellyshare-network
 
 volumes:
   postgres_data:
 
 networks:
-  jfshare-network:
+  jellyshare-network:
     driver: bridge

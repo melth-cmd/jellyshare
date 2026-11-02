@@ -16,7 +16,7 @@ web/.preview
 .hallmark
 *.log
 coverage.*
-/jfshare
+/jellyshare
 /tmp
 
 # Local database dumps

@@ -407,7 +407,7 @@ func (c *Client) VerifyConnection(ctx context.Context) error {
 // AuthHeader returns the standard MediaBrowser Authorization header value.
 // Jellyfin 10.11 removed legacy auth (X-Emby-Token header, api_key query param).
 func (c *Client) AuthHeader() string {
-	return `MediaBrowser Client="jellyfin-share", Device="jfshare-backend", DeviceId="jfshare-backend", Version="1.0", Token="` + c.apiKey + `"`
+	return `MediaBrowser Client="jellyshare", Device="jellyshare-backend", DeviceId="jellyshare-backend", Version="1.0", Token="` + c.apiKey + `"`
 }
 
 func (c *Client) BaseURL() string {

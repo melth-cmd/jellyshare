@@ -47,14 +47,14 @@ COPY --from=frontend-builder /app/web/dist ./web/dist
 # which put an x86-64 binary into the arm64 image as well.
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build \
     -ldflags="-w -s -X main.Version=$(date +%Y%m%d)" \
-    -o /jfshare ./cmd/server
+    -o /jellyshare ./cmd/server
 
 # Stage 3: Final minimal image
 FROM alpine:3.20
 
-LABEL org.opencontainers.image.title="JFShare"
-LABEL org.opencontainers.image.description="Jellyfin one-time share link system"
-LABEL org.opencontainers.image.source="https://github.com/melth-cmd/jellyfin-share-backend"
+LABEL org.opencontainers.image.title="Jellyshare"
+LABEL org.opencontainers.image.description="Jellyshare - one-time share links for Jellyfin"
+LABEL org.opencontainers.image.source="https://github.com/melth-cmd/jellyshare"
 
 # Install runtime dependencies
 RUN apk add --no-cache ca-certificates tzdata
@@ -62,7 +62,7 @@ RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 
 # Copy binary from builder
-COPY --from=backend-builder /jfshare .
+COPY --from=backend-builder /jellyshare .
 
 # Copy migrations for embedded FS
 COPY --from=backend-builder /app/migrations ./migrations
@@ -71,17 +71,17 @@ COPY --from=backend-builder /app/migrations ./migrations
 COPY --from=frontend-builder /app/web/dist ./web/dist
 
 # Create non-root user
-RUN addgroup -g 1000 jfshare && \
-    adduser -D -u 1000 -G jfshare jfshare && \
-    chown -R jfshare:jfshare /app
+RUN addgroup -g 1000 jellyshare && \
+    adduser -D -u 1000 -G jellyshare jellyshare && \
+    chown -R jellyshare:jellyshare /app
 
-USER jfshare
+USER jellyshare
 
 EXPOSE 8097
 
-# Follow JFSHARE_PORT rather than hard-coding it: a fixed port here left the
+# Follow JELLYSHARE_PORT rather than hard-coding it: a fixed port here left the
 # container permanently unhealthy whenever the port was overridden.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider "http://localhost:${JFSHARE_PORT:-8097}/health" || exit 1
+    CMD wget --no-verbose --tries=1 --spider "http://localhost:${JELLYSHARE_PORT:-8097}/health" || exit 1
 
-ENTRYPOINT ["/app/jfshare"]
+ENTRYPOINT ["/app/jellyshare"]

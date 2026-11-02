@@ -48,7 +48,7 @@ type Signer struct {
 // can never double as anything else signed with that secret.
 func NewSigner(secret string) *Signer {
 	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write([]byte("jfshare-download-ticket-v1"))
+	mac.Write([]byte("jellyshare-download-ticket-v1"))
 	return &Signer{key: mac.Sum(nil)}
 }
 

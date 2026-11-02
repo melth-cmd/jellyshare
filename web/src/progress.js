@@ -24,6 +24,7 @@ export async function loadProgress(token) {
   // Where earlier versions kept it, in this browser. Nothing reads it now.
   try {
     localStorage.removeItem(`jfshare:progress:${token}`);
+    localStorage.removeItem(`jellyshare:progress:${token}`);
   } catch (e) {
     // Storage blocked - nothing was kept there either.
   }
