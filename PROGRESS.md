@@ -568,3 +568,12 @@ pass.
   Thai track leaves the menu on None. Once the viewer changes the menu -
   including choosing None - the default never reapplies. Verified in jsdom for
   language-tagged Thai, title-only Thai, no Thai, and explicit None.
+- #29 done: new share tokens are `<slug>-<12 hex>`, reusing `public_token` so
+  there is no migration and old 24-hex links keep resolving. The slug is built
+  from the Jellyfin item: film/series title, `series-s01` for a season, and
+  `series-s01-ep-01` for an episode. Accents fold to ASCII, punctuation
+  collapses to hyphens, the slug is capped at 40 characters, and a Thai-only
+  title falls back to `share`. Duplicate re-fetches the source item to rebuild
+  the same slug, falling back to the stored title if the item is gone. Verified
+  live for film, series, season, episode and duplicate, plus an old token still
+  returning 200.
