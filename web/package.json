@@ -14,7 +14,8 @@
     "vite": "^7.3.7"
   },
   "dependencies": {
-    "hls.js": "^1.7.4"
+    "hls.js": "^1.7.4",
+    "qrcode-generator": "^2.0.4"
   },
   "engines": {
     "node": ">=20.19"

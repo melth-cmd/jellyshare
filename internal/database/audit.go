@@ -88,6 +88,110 @@ type DailyViews struct {
 	Views int    `json:"views"`
 }
 
+// ShareAnalyticsRow is one link's usage in the analytics overview.
+type ShareAnalyticsRow struct {
+	ID                  uuid.UUID `db:"id" json:"id"`
+	Title               string    `db:"title" json:"title"`
+	TotalPlays          int       `db:"total_plays" json:"totalPlays"`
+	Views               int       `db:"views" json:"views"`
+	UniqueViewers       int       `db:"unique_viewers" json:"uniqueViewers"`
+	AvgWatchTimeSeconds int       `db:"avg_watch_time_seconds" json:"avgWatchTimeSeconds"`
+}
+
+// AnalyticsOverview is the aggregate shown on the admin Analytics tab.
+type AnalyticsOverview struct {
+	TotalShares         int                 `json:"totalShares"`
+	ActiveShares        int                 `json:"activeShares"`
+	TotalPlays          int                 `json:"totalPlays"`
+	TotalViews          int                 `json:"totalViews"`
+	UniqueViewers       int                 `json:"uniqueViewers"`
+	AvgWatchTimeSeconds int                 `json:"avgWatchTimeSeconds"`
+	ViewsByDay          []DailyViews        `json:"viewsByDay"`
+	Shares              []ShareAnalyticsRow `json:"shares"`
+}
+
+// GetAnalyticsOverview aggregates usage across every share. It is one set of
+// queries rather than one request per link, so the Analytics tab stays cheap.
+func (db *DB) GetAnalyticsOverview(ctx context.Context) (*AnalyticsOverview, error) {
+	overview := &AnalyticsOverview{
+		ViewsByDay: []DailyViews{},
+		Shares:     []ShareAnalyticsRow{},
+	}
+
+	total, active, err := db.CountShares(ctx)
+	if err != nil {
+		return nil, err
+	}
+	overview.TotalShares = total
+	overview.ActiveShares = active
+
+	if err := db.GetContext(ctx, &overview.TotalPlays, `SELECT COALESCE(SUM(total_plays), 0) FROM shares`); err != nil {
+		return nil, fmt.Errorf("failed to sum plays: %w", err)
+	}
+	if err := db.GetContext(ctx, &overview.TotalViews, `
+		SELECT COUNT(*) FROM audit_logs WHERE event_type = 'playback_started'
+	`); err != nil {
+		return nil, fmt.Errorf("failed to count views: %w", err)
+	}
+	if err := db.GetContext(ctx, &overview.UniqueViewers, `
+		SELECT COUNT(DISTINCT client_ip_hash) FROM audit_logs
+		WHERE event_type = 'playback_started' AND client_ip_hash IS NOT NULL
+	`); err != nil {
+		return nil, fmt.Errorf("failed to count unique viewers: %w", err)
+	}
+	if err := db.GetContext(ctx, &overview.AvgWatchTimeSeconds, `
+		SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (COALESCE(finished_at, NOW()) - started_at))), 0)::int
+		FROM share_sessions
+	`); err != nil {
+		return nil, fmt.Errorf("failed to average watch time: %w", err)
+	}
+
+	type dailyRow struct {
+		Date  string `db:"date"`
+		Views int    `db:"views"`
+	}
+	var dailyRows []dailyRow
+	if err := db.SelectContext(ctx, &dailyRows, `
+		SELECT DATE(created_at) AS date, COUNT(*) AS views
+		FROM audit_logs
+		WHERE event_type = 'playback_started'
+			AND created_at >= NOW() - INTERVAL '30 days'
+		GROUP BY DATE(created_at)
+		ORDER BY date ASC
+	`); err != nil {
+		return nil, fmt.Errorf("failed to get daily views: %w", err)
+	}
+	for _, row := range dailyRows {
+		overview.ViewsByDay = append(overview.ViewsByDay, DailyViews{Date: row.Date, Views: row.Views})
+	}
+
+	if err := db.SelectContext(ctx, &overview.Shares, `
+		SELECT s.id, s.title, s.total_plays,
+		       COALESCE(v.views, 0) AS views,
+		       COALESCE(v.unique_viewers, 0) AS unique_viewers,
+		       COALESCE(w.avg_watch_time_seconds, 0) AS avg_watch_time_seconds
+		FROM shares s
+		LEFT JOIN (
+			SELECT share_id, COUNT(*) AS views,
+			       COUNT(DISTINCT client_ip_hash) AS unique_viewers
+			FROM audit_logs
+			WHERE event_type = 'playback_started'
+			GROUP BY share_id
+		) v ON v.share_id = s.id
+		LEFT JOIN (
+			SELECT share_id,
+			       AVG(EXTRACT(EPOCH FROM (COALESCE(finished_at, NOW()) - started_at)))::int AS avg_watch_time_seconds
+			FROM share_sessions
+			GROUP BY share_id
+		) w ON w.share_id = s.id
+		ORDER BY s.created_at DESC
+	`); err != nil {
+		return nil, fmt.Errorf("failed to get per-share analytics: %w", err)
+	}
+
+	return overview, nil
+}
+
 // GetShareAnalytics retrieves analytics for a specific share
 func (db *DB) GetShareAnalytics(ctx context.Context, shareID uuid.UUID) (*ShareAnalytics, error) {
 	analytics := &ShareAnalytics{

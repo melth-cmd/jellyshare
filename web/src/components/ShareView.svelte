@@ -388,7 +388,6 @@
 
   let selectedAudioIndex = null;
   let selectedSubtitleIndex = null;
-  let tracksOpen = false;
 
   // Jellyfin's own titles name codecs ("Deutsch - PGSSUB"), which mean nothing to
   // a viewer. A track is named by its language and, for audio, its layout; only
@@ -423,14 +422,6 @@
   }
   $: subtitleLabels = labelTracks(shareInfo.subtitleTracks, 'Subtitle');
   $: hasTracks = (shareInfo.audioTracks?.length > 1) || (shareInfo.subtitleTracks?.length > 0);
-  $: tracksSummary = [
-    shareInfo.audioTracks?.length > 1
-      ? `Audio: ${audioLabels.get(selectedAudioIndex)}`
-      : null,
-    shareInfo.subtitleTracks?.length > 0
-      ? `Subtitles: ${selectedSubtitleIndex == null ? 'None' : subtitleLabels.get(selectedSubtitleIndex)}`
-      : null
-  ].filter(Boolean).join(' · ');
 
   // Report what this browser can actually decode so the server can stream-copy a
   // matching source instead of re-encoding it. AV1 is never claimed: segments are
@@ -1224,40 +1215,6 @@
             </button>
           </form>
         {:else}
-          {#if hasTracks}
-            <!-- Most viewers keep the defaults, so the choice is one line until
-                 it is wanted - and it sits above Play, where it still applies. -->
-            <details class="tracks" bind:open={tracksOpen}>
-              <summary class="tracks__summary">
-                <span class="tracks__now">{tracksSummary}</span>
-                <span class="tracks__change">{tracksOpen ? 'Done' : 'Change'}</span>
-              </summary>
-              <div class="tracks__fields">
-                {#if shareInfo.audioTracks && shareInfo.audioTracks.length > 1}
-                  <div class="field">
-                    <label for="audio-select">Audio</label>
-                    <select id="audio-select" bind:value={selectedAudioIndex}>
-                      {#each shareInfo.audioTracks as track}
-                        <option value={track.index}>{audioLabels.get(track.index)}</option>
-                      {/each}
-                    </select>
-                  </div>
-                {/if}
-                {#if shareInfo.subtitleTracks && shareInfo.subtitleTracks.length > 0}
-                  <div class="field">
-                    <label for="subtitle-select">Subtitles</label>
-                    <select id="subtitle-select" bind:value={selectedSubtitleIndex}>
-                      <option value={null}>None</option>
-                      {#each shareInfo.subtitleTracks as track}
-                        <option value={track.index}>{subtitleLabels.get(track.index)}</option>
-                      {/each}
-                    </select>
-                  </div>
-                {/if}
-              </div>
-            </details>
-          {/if}
-
           {#if isSeasonOrSeries}
             {#if episodes.length > 0}
               <div class="play">
@@ -1404,6 +1361,36 @@
               <p class="watched"><CheckIcon /> <span>Watched</span></p>
             {/if}
           {/if}
+        {/if}
+
+        {#if hasTracks}
+          <!-- Below Play, always visible: subtitles are a primary control, not a
+               setting behind a disclosure. -->
+          <div class="tracks">
+            <div class="tracks__fields">
+              {#if shareInfo.audioTracks && shareInfo.audioTracks.length > 1}
+                <div class="field">
+                  <label for="audio-select">Audio</label>
+                  <select id="audio-select" bind:value={selectedAudioIndex}>
+                    {#each shareInfo.audioTracks as track}
+                      <option value={track.index}>{audioLabels.get(track.index)}</option>
+                    {/each}
+                  </select>
+                </div>
+              {/if}
+              {#if shareInfo.subtitleTracks && shareInfo.subtitleTracks.length > 0}
+                <div class="field">
+                  <label for="subtitle-select">Subtitles</label>
+                  <select id="subtitle-select" bind:value={selectedSubtitleIndex}>
+                    <option value={null}>None</option>
+                    {#each shareInfo.subtitleTracks as track}
+                      <option value={track.index}>{subtitleLabels.get(track.index)}</option>
+                    {/each}
+                  </select>
+                </div>
+              {/if}
+            </div>
+          </div>
         {/if}
 
         {#if !spent && (viewerLimit || countingNote || (tvNote && !$castApiReady))}
@@ -1769,42 +1756,10 @@
   }
 
   /* ── Controls ──────────────────────────────────────────────────────────── */
-  .tracks { width: 100%; }
-
-  .tracks__summary {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: var(--space-2xs) var(--space-sm);
-    min-height: var(--control-h);
-    padding-block: var(--space-xs);
-    list-style: none;
-    cursor: pointer;
-    border-radius: var(--radius-input);
+  .tracks {
+    width: 100%;
+    margin-top: var(--space-sm);
   }
-
-  .tracks__summary::-webkit-details-marker { display: none; }
-
-  .tracks__now {
-    font-size: var(--text-sm);
-    color: var(--color-ink-2);
-    overflow-wrap: anywhere;
-  }
-
-  /* Ink, not accent: Play is the one thing on the page in Jellyfin blue. */
-  .tracks__change {
-    font-size: var(--text-sm);
-    font-weight: 600;
-    color: var(--color-ink);
-    white-space: nowrap;
-    border-bottom: var(--rule-hair) solid var(--color-ink-2);
-  }
-
-  @media (hover: hover) {
-    .tracks__summary:hover .tracks__change { border-bottom-color: var(--color-ink); }
-  }
-
-  .tracks[open] .tracks__change { color: var(--color-ink-2); border-bottom-color: var(--color-rule); }
 
   .tracks__fields {
     display: flex;

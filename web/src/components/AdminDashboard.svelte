@@ -1,6 +1,7 @@
 <script>
   import BrandMark from './BrandMark.svelte';
   import CreatePanel from './CreatePanel.svelte';
+  import AnalyticsPanel from './AnalyticsPanel.svelte';
   import EditShareDialog from './EditShareDialog.svelte';
   import { copyText } from '../clipboard.js';
   import { onMount, tick, createEventDispatcher } from 'svelte';
@@ -10,6 +11,7 @@
   const TAB_KEY = 'jfshare_admin_tab';
   let activeTab = 'shares';
   let createPanel;
+  let analyticsPanel;
 
   const dispatch = createEventDispatcher();
 
@@ -59,7 +61,7 @@
 
   onMount(() => {
     const savedTab = sessionStorage.getItem(TAB_KEY);
-    if (savedTab === 'create' || savedTab === 'shares') activeTab = savedTab;
+    if (savedTab === 'create' || savedTab === 'shares' || savedTab === 'analytics') activeTab = savedTab;
     loadShares();
     return () => clearTimeout(copyTimer);
   });
@@ -67,11 +69,12 @@
   function setTab(tab) {
     activeTab = tab;
     sessionStorage.setItem(TAB_KEY, tab);
-    if (tab === 'create') clearSelection();
+    if (tab !== 'shares') clearSelection();
   }
 
   function refreshCurrent() {
     if (activeTab === 'shares') loadShares();
+    else if (activeTab === 'analytics') analyticsPanel?.reload();
     else createPanel?.reload();
   }
 
@@ -407,6 +410,15 @@
       aria-controls="panel-shares"
       on:click={() => setTab('shares')}
     >Shares</button>
+    <button
+      class="pill__tab"
+      class:pill__tab--active={activeTab === 'analytics'}
+      id="tab-analytics"
+      role="tab"
+      aria-selected={activeTab === 'analytics'}
+      aria-controls="panel-analytics"
+      on:click={() => setTab('analytics')}
+    >Analytics</button>
   </div>
   <button class="pill__icon" on:click={refreshCurrent} disabled={loading} aria-label="Reload">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
@@ -608,6 +620,10 @@
       {#if moreError}<p class="banner" role="alert">{moreError}</p>{/if}
     {/if}
   </div>
+  {:else if activeTab === 'analytics'}
+    <div id="panel-analytics" role="tabpanel" aria-labelledby="tab-analytics">
+      <AnalyticsPanel {apiKey} bind:this={analyticsPanel} />
+    </div>
   {:else}
     <div id="panel-create" role="tabpanel" aria-labelledby="tab-create">
       <CreatePanel
