@@ -172,8 +172,23 @@ POSTGRES_PASSWORD=your-secure-db-password
 
 ### 3. Start the Server
 
+The compose file pins the release image tag. The GHCR package is private, so
+authenticate once with a token that can read packages, then pull:
+
 ```bash
-docker-compose up -d
+gh auth refresh -s read:packages
+gh auth token | docker login ghcr.io -u melth-cmd --password-stdin
+
+docker compose pull jfshare
+docker compose up -d
+```
+
+If this host cannot authenticate to GHCR, build the same tag locally from the
+checked-out release instead:
+
+```bash
+docker build -t ghcr.io/melth-cmd/jellyfin-share-backend:0.1.0 .
+docker compose up -d
 ```
 
 The server will be available at `http://localhost:8097`
@@ -263,6 +278,29 @@ The restore drops and recreates the target's `public` schema, then loads the
 dump. Stop the app first when restoring production; its open connections are
 terminated and it should reconnect after the restore completes. The dev target
 defaults to `jfshare-db-dev`.
+
+## Upgrading
+
+Releases are pinned in `docker-compose.yml`; production never follows `latest`.
+
+```bash
+# 1. Back up first
+make backup-db
+
+# 2. Change the image tag in docker-compose.yml to the new release, then
+docker compose pull jfshare
+docker compose up -d
+
+# 3. Check it came up and a link still opens
+curl -fsS http://localhost:8097/health
+```
+
+To roll back, put the previous tag back in `docker-compose.yml`, pull, and
+`docker compose up -d` again. Keep the previous dump in `.backups/` in case the
+new release needs a database change.
+
+The local fallback for a host without GHCR access is `make prod-rebuild`, which
+builds the pinned tag from this checkout.
 
 ## API Reference
 

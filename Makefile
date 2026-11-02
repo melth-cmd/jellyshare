@@ -93,7 +93,8 @@ prod-up:
 		echo "ERROR: .env file not found. Copy .env.example and configure it."; \
 		exit 1; \
 	fi
-	docker-compose up -d --build
+	docker-compose pull jfshare
+	docker-compose up -d
 	@echo ""
 	@echo "Production environment running at http://localhost:8097"
 
@@ -103,8 +104,10 @@ prod-down:
 prod-logs:
 	docker-compose logs -f jfshare
 
+# Local fallback when the GHCR package is not reachable from this host.
+# Normal upgrades use the pinned image and `make prod-up`.
 prod-rebuild:
-	docker-compose build --no-cache jfshare
+	docker build -t ghcr.io/melth-cmd/jellyfin-share-backend:0.1.0 .
 	docker-compose up -d jfshare
 
 # =============================================================================
