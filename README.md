@@ -197,14 +197,20 @@ The server will be available at `http://localhost:8097`
 
 Navigate to `http://localhost:8097/admin` and enter your `BACKEND_API_KEY`.
 
-The dashboard has two tabs:
+The dashboard has three tabs:
 
 - **Create** — search for a film or series, expand a series to its seasons and
   episodes, choose what to share, then set expiry, play and viewer limits,
-  quality caps, a password, and whether downloads are allowed.
+  quality caps, a password, and whether downloads are allowed. Recently shared
+  items and the last chosen item are kept in this browser for a quick return.
 - **Shares** — filter by Active, Inactive, or All; select rows with checkboxes
-  (shift-click for a range) to revoke or delete in bulk; edit or revoke any
-  individual link from its row or detail sheet.
+  (shift-click for a range) to revoke or delete in bulk; edit, revoke, restore
+  or duplicate any individual link from its row or detail sheet.
+- **Analytics** — totals, a 30-day views chart, and per-link views, unique
+  viewers, average watch time and plays.
+
+New links use a readable slug plus a random suffix, for example
+`/s/mr-mrs-smith-s01-ep-01-2bf3cd802f25`. Older random-token links keep working.
 
 Links are owned by the first Jellyfin user the backend finds at startup. The
 create API accepts an explicit `jellyfinUserId` when another owner is needed.
