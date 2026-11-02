@@ -15,6 +15,8 @@ const (
 	AuditEventShareRevoked    AuditEventType = "share_revoked"
 	AuditEventShareUpdated    AuditEventType = "share_updated"
 	AuditEventShareDeleted    AuditEventType = "share_deleted"
+	AuditEventShareRestored   AuditEventType = "share_restored"
+	AuditEventShareDuplicated AuditEventType = "share_duplicated"
 	AuditEventShareAccessed   AuditEventType = "share_accessed"
 	AuditEventPasswordAttempt AuditEventType = "password_attempt"
 	AuditEventPlaybackStarted AuditEventType = "playback_started"

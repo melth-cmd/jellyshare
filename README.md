@@ -416,12 +416,27 @@ X-Backend-Key: your-api-key
   "maxConcurrentViewers": 2,
   "extendMinutes": 1440,
   "password": "new-password",
-  "removePassword": false
+  "removePassword": false,
+  "allowDownload": false,
+  "maxVideoHeight": 720,
+  "maxVideoBitrate": 4000000
 }
 ```
 
 All fields are optional; omitted fields stay as they are. `extendMinutes` adds to
-the existing expiry and does nothing to a link that never expires.
+the existing expiry and does nothing to a link that never expires. A
+`maxVideoHeight` or `maxVideoBitrate` of `0` removes that cap.
+
+#### Restore or Duplicate a Share
+```http
+POST /api/admin/shares/{id}/restore
+POST /api/admin/shares/{id}/duplicate
+X-Backend-Key: your-api-key
+```
+
+Restore clears a revoke only when the link is still usable; an expired or
+used-up link returns `409`. Duplicate copies the terms with a new token and a
+fresh lifetime, and returns the same shape as Create Share.
 
 #### Share Analytics
 ```http

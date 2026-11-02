@@ -162,6 +162,25 @@ func (db *DB) DeleteInactiveShares(ctx context.Context, ids []uuid.UUID) ([]uuid
 	return deleted, nil
 }
 
+// RestoreShare clears a revoke only when the link can still be watched. An
+// expired or used-up link needs its terms changed first.
+func (db *DB) RestoreShare(ctx context.Context, id uuid.UUID) error {
+	query := `UPDATE shares SET revoked_at = NULL
+		WHERE id = $1
+		  AND revoked_at IS NOT NULL
+		  AND (expires_at IS NULL OR expires_at > NOW())
+		  AND (max_total_plays IS NULL OR total_plays < max_total_plays)`
+	result, err := db.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to restore share: %w", err)
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("share cannot be restored")
+	}
+	return nil
+}
+
 func (db *DB) RevokeShare(ctx context.Context, id uuid.UUID) error {
 	query := `UPDATE shares SET revoked_at = NOW() WHERE id = $1 AND revoked_at IS NULL`
 	result, err := db.ExecContext(ctx, query, id)
@@ -176,7 +195,7 @@ func (db *DB) RevokeShare(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (db *DB) UpdateShare(ctx context.Context, id uuid.UUID, maxTotalPlays, maxConcurrentViewers *int, extendMinutes *int, passwordHash *string, removePassword bool) error {
+func (db *DB) UpdateShare(ctx context.Context, id uuid.UUID, maxTotalPlays, maxConcurrentViewers *int, extendMinutes *int, passwordHash *string, removePassword bool, allowDownload *bool, maxVideoHeight, maxVideoBitrate *int) error {
 	// Build dynamic update
 	updates := []string{}
 	args := []interface{}{}
@@ -208,6 +227,32 @@ func (db *DB) UpdateShare(ctx context.Context, id uuid.UUID, maxTotalPlays, maxC
 
 	if removePassword {
 		updates = append(updates, "password_hash = NULL")
+	}
+
+	if allowDownload != nil {
+		updates = append(updates, fmt.Sprintf("allow_download = $%d", argIdx))
+		args = append(args, *allowDownload)
+		argIdx++
+	}
+
+	if maxVideoHeight != nil {
+		if *maxVideoHeight == 0 {
+			updates = append(updates, "max_video_height = NULL")
+		} else {
+			updates = append(updates, fmt.Sprintf("max_video_height = $%d", argIdx))
+			args = append(args, *maxVideoHeight)
+			argIdx++
+		}
+	}
+
+	if maxVideoBitrate != nil {
+		if *maxVideoBitrate == 0 {
+			updates = append(updates, "max_video_bitrate = NULL")
+		} else {
+			updates = append(updates, fmt.Sprintf("max_video_bitrate = $%d", argIdx))
+			args = append(args, *maxVideoBitrate)
+			argIdx++
+		}
 	}
 
 	if len(updates) == 0 {

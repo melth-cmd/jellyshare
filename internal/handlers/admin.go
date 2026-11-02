@@ -274,6 +274,9 @@ func (h *AdminHandler) ListShares(w http.ResponseWriter, r *http.Request) {
 		if s.MaxVideoHeight.Valid {
 			item.MaxVideoHeight = &s.MaxVideoHeight.Int64
 		}
+		if s.MaxVideoBitrate.Valid {
+			item.MaxVideoBitrate = &s.MaxVideoBitrate.Int64
+		}
 		items = append(items, item)
 	}
 
@@ -455,6 +458,86 @@ func (h *AdminHandler) BulkDeleteShares(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
+func (h *AdminHandler) RestoreShare(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid share ID")
+		return
+	}
+	if !h.ownedBy(r, id) {
+		writeError(w, http.StatusForbidden, "share belongs to another user")
+		return
+	}
+	if err := h.db.RestoreShare(r.Context(), id); err != nil {
+		writeError(w, http.StatusConflict, "link cannot be restored; it may be expired or out of plays")
+		return
+	}
+	h.db.LogAuditEvent(r.Context(), database.AuditEventShareRestored, &id, nil, nil, nil, nil)
+	writeJSON(w, http.StatusOK, map[string]string{"status": "restored"})
+}
+
+func (h *AdminHandler) DuplicateShare(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid share ID")
+		return
+	}
+	if !h.ownedBy(r, id) {
+		writeError(w, http.StatusForbidden, "share belongs to another user")
+		return
+	}
+
+	source, err := h.db.GetShareByID(r.Context(), id)
+	if err != nil || source == nil {
+		writeError(w, http.StatusNotFound, "share not found")
+		return
+	}
+
+	duplicate := *source
+	duplicate.ID = uuid.New()
+	duplicate.PublicToken = middleware.GenerateSecureToken(24)
+	duplicate.CreatedAt = time.Now()
+	duplicate.TotalPlays = 0
+	duplicate.CurrentConcurrentViewers = 0
+	duplicate.RevokedAt = sql.NullTime{}
+	duplicate.LastActivityAt = sql.NullTime{}
+	if source.ExpiresAt.Valid {
+		lifetime := source.ExpiresAt.Time.Sub(source.CreatedAt)
+		if lifetime <= 0 {
+			lifetime = 30 * 24 * time.Hour
+		}
+		duplicate.ExpiresAt = models.NullTime{NullTime: sql.NullTime{Time: time.Now().Add(lifetime), Valid: true}}
+	} else {
+		duplicate.ExpiresAt = models.NullTime{}
+	}
+
+	if err := h.db.CreateShare(r.Context(), &duplicate); err != nil {
+		log.Printf("Failed to duplicate share: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to duplicate share")
+		return
+	}
+
+	h.db.LogAuditEvent(r.Context(), database.AuditEventShareDuplicated, &duplicate.ID, nil, nil, nil, map[string]interface{}{
+		"sourceShareId": source.ID,
+	})
+
+	resp := models.CreateShareResponse{
+		ShareID:   duplicate.ID,
+		PublicURL: h.cfg.PublicBaseURL + "/s/" + duplicate.PublicToken,
+		Token:     duplicate.PublicToken,
+		ExpiresAt: duplicate.ExpiresAtPtr(),
+	}
+	if duplicate.MaxTotalPlays.Valid {
+		value := int(duplicate.MaxTotalPlays.Int64)
+		resp.MaxTotalPlays = &value
+	}
+	if duplicate.MaxConcurrentViewers.Valid {
+		value := int(duplicate.MaxConcurrentViewers.Int64)
+		resp.MaxConcurrentViewers = &value
+	}
+	writeJSON(w, http.StatusCreated, resp)
+}
+
 func (h *AdminHandler) UpdateShare(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
@@ -479,7 +562,7 @@ func (h *AdminHandler) UpdateShare(w http.ResponseWriter, r *http.Request) {
 		passwordHash = &hash
 	}
 
-	if err := h.db.UpdateShare(r.Context(), id, req.MaxTotalPlays, req.MaxConcurrentViewers, req.ExtendMinutes, passwordHash, req.RemovePassword); err != nil {
+	if err := h.db.UpdateShare(r.Context(), id, req.MaxTotalPlays, req.MaxConcurrentViewers, req.ExtendMinutes, passwordHash, req.RemovePassword, req.AllowDownload, req.MaxVideoHeight, req.MaxVideoBitrate); err != nil {
 		log.Printf("Failed to update share: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to update share")
 		return

@@ -370,8 +370,12 @@ type ShareListItem struct {
 	CreatedAt                time.Time  `db:"created_at" json:"createdAt"`
 	RevokedAt                *time.Time `db:"revoked_at" json:"revokedAt,omitempty"`
 	MaxVideoHeight           *int64     `json:"maxVideoHeight,omitempty"`
+	MaxVideoBitrate          *int64     `json:"maxVideoBitrate,omitempty"`
 	HasPassword              bool       `json:"hasPassword"`
-	AllowDownload            bool       `json:"allowDownload"`
+	// AllowDownload is the effective permission after the server-wide switch;
+	// AllowDownloadStored is the link's own choice, which the editor changes.
+	AllowDownload       bool `json:"allowDownload"`
+	AllowDownloadStored bool `json:"allowDownloadStored"`
 	// PublicURL is built from PublicBaseURL, not from the caller's view of the
 	// backend, so clients never have to reconstruct it from their own base URL.
 	PublicURL string `json:"publicUrl"`
@@ -387,4 +391,8 @@ type UpdateShareRequest struct {
 	ExtendMinutes        *int    `json:"extendMinutes,omitempty"`
 	Password             *string `json:"password,omitempty"`
 	RemovePassword       bool    `json:"removePassword,omitempty"`
+	AllowDownload        *bool   `json:"allowDownload,omitempty"`
+	// Zero clears the cap; a positive value sets it. Omitted leaves it alone.
+	MaxVideoHeight  *int `json:"maxVideoHeight,omitempty"`
+	MaxVideoBitrate *int `json:"maxVideoBitrate,omitempty"`
 }
