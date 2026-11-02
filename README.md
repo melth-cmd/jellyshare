@@ -187,7 +187,7 @@ If this host cannot authenticate to GHCR, build the same tag locally from the
 checked-out release instead:
 
 ```bash
-docker build -t ghcr.io/melth-cmd/jellyfin-share-backend:0.1.2 .
+docker build -t ghcr.io/melth-cmd/jellyfin-share-backend:0.2.0 .
 docker compose up -d
 ```
 
