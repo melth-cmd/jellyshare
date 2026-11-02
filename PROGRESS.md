@@ -629,3 +629,5 @@ pass.
   module, image, container, env prefix, systemd units, browser keys and docs,
   with the compatibility decisions listed. Moved #16 Thai localization to the
   new 0.5.0 milestone so the rename lands first.
+- Prepared `v0.3.0`: version references in the compose file, Makefile, README
+  and frontend package bumped to `0.3.0`.
