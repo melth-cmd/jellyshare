@@ -43,7 +43,6 @@ A direct internet client cannot choose its own rate-limit bucket.
 ## Start and verify
 
 ```bash
-gh auth token | docker login ghcr.io -u melth-cmd --password-stdin
 docker compose pull jellyshare
 docker compose up -d
 

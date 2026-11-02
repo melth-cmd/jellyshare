@@ -10,9 +10,10 @@ A private, personal build of a Jellyfin link-sharing backend. It serves:
 - a Svelte admin UI at `/admin` (`web/src/components/Admin*.svelte`),
 - public share pages for viewers who have no Jellyfin account.
 
-This is not a public fork. Do not add remotes, links, badges, plugin
-integrations, or references to any upstream project or its companion plugin.
-There is no plugin: share creation belongs in the admin page.
+This is a personal fork of a fork. Do not add remotes, badges, plugin
+integrations, or references to the upstream companion plugin. Keep the upstream
+attribution in `CREDITS.md` and the README. There is no plugin: share creation
+belongs in the admin page.
 
 ## Commands
 

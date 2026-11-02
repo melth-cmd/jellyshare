@@ -147,19 +147,14 @@ POSTGRES_PASSWORD=your-secure-db-password
 
 ### 3. Start the Server
 
-The compose file pins the release image tag. The GHCR package is private, so
-pulling it needs a token with `read:packages` and access to the package:
+The compose file pins the release image tag. Pull it and start:
 
 ```bash
-gh auth refresh -s read:packages
-gh auth token | docker login ghcr.io -u melth-cmd --password-stdin
-
 docker compose pull jellyshare
 docker compose up -d
 ```
 
-If you do not have access to the private package, build the same tag locally
-from the checkout instead:
+If you prefer to build from the checkout instead:
 
 ```bash
 docker build -t ghcr.io/melth-cmd/jellyshare:0.5.0 .
@@ -358,6 +353,14 @@ The dev stack, checks, local demo, project structure and build commands are in
   keep working.
 - The public page has an EN/TH pill, Thai dates with the Gregorian calendar, and
   Thai track language names.
+
+## Credits
+
+Jellyshare is a fork of
+[stanislavhannes/jellyfin-share-backend](https://github.com/stanislavhannes/jellyfin-share-backend),
+which is a fork of
+[monxas/jellyfin-share-backend](https://github.com/monxas/jellyfin-share-backend).
+Both are MIT-licensed. See [`CREDITS.md`](CREDITS.md) for details.
 
 ## License
 
