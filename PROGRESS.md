@@ -43,7 +43,7 @@ make dev-up                  # once per session
 scripts/sync-dev-db.sh       # optional, refresh data from production
 ```
 
-- Open `http://localhost:5173/admin` for the UI (Vite HMR).
+- Open `http://<host-ip>:5173/admin` for the UI (Vite HMR).
 - Go edits rebuild and restart the dev server automatically via `air`.
 - SQL migration edits also restart the dev server; migrations run at startup.
 - Production stays up at `http://localhost:8097` and is untouched.
@@ -68,8 +68,8 @@ talks to the real Jellyfin library. Picking a real film or series works in dev.
 Done when: editing a Go file and a Svelte file is reflected in the browser with
 no compose rebuild, and dev data matches production after a sync.
 
-Status: done. Dev backend is on `http://localhost:8098`, Vite on
-`http://localhost:5173`, and the sync script copies production data. Go changes
+Status: done. Dev backend is on `http://<host-ip>:8098`, Vite on
+`http://<host-ip>:5173`, and the sync script copies production data. Go changes
 rebuild via `air`; Svelte changes are served by Vite immediately.
 
 ### Step 1 — Backend: Jellyfin library search
@@ -479,11 +479,11 @@ pass.
 
   ```bash
   curl -s -H "X-Backend-Key: $BACKEND_API_KEY" \
-    "http://localhost:8098/api/admin/jellyfin/items?q=alien&limit=5"
+    "http://<host-ip>:8098/api/admin/jellyfin/items?q=alien&limit=5"
   ```
 
-- Dev UI: `http://localhost:5173/admin`
-- Production UI: `http://localhost:8097/admin`
+- Dev UI: `http://<host-ip>:5173/admin`
+- Production UI: `http://<host-ip>:8097/admin`
 
 ## Log
 
@@ -655,7 +655,7 @@ pass.
   copied to `jellyshare_data`, containers renamed to `jellyshare` /
   `jellyshare-db`, and the systemd timer replaced with
   `jellyshare-backup.timer`. The local checkout moved to
-  `%h/jellyshare`; the dev stack was recreated and synced from
+  `<repo>`; the dev stack was recreated and synced from
   production. Health, admin, analytics, the external URL and an old 24-hex share
   token all return 200. The 0.4.0 milestone is closed.
 - #16 done: the public share page, player, error page and cast messages are

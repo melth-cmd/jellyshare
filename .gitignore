@@ -42,3 +42,6 @@ web/.preview/
 
 # Local database dumps
 /.backups/
+
+# Local screenshots (not part of the public repo)
+docs/screenshots/

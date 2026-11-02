@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="web/public/brand/icon-512.png" alt="" width="112">
-</p>
-
 <h1 align="center">Jellyshare</h1>
 
 <p align="center">
@@ -22,59 +18,13 @@ them your Jellyfin server. The link carries its own terms: how long it lasts,
 how often it can be played, how many people may watch at once, and an optional
 password.
 
-This build includes Jellyfin 12 support, two security fixes, a reworked streaming
-path and a redesigned interface. See [Notable changes](#notable-changes).
-
-## What it looks like
-
-A shared film. The artwork Jellyfin already holds fills the page, and the
-link's terms come first, in words: what is left and until when. Resume says
-whose place it goes back to, because everyone holding a link shares its
-progress, on any device. Subtitles, and the audio track where there is more
-than one, can be changed before anything plays.
-
-![A shared film: the backdrop and poster, the terms of the link, Resume with where it was left, Download and Cast](docs/screenshots/share-movie.png)
-
-A shared season. Each episode shows its still, its overview and how much of it
-has been watched on this link. An episode that runs on into the next one is
-still the same play.
-
-![A shared season with its episode list, stills, overviews and progress](docs/screenshots/share-series.png)
-
-On a phone every action takes the full width, so no label is ever cut short,
-and a password link keeps its field above the keyboard.
-
-<p align="center">
-  <img src="docs/screenshots/phone-movie.png" width="260" alt="A shared film on a phone: the terms, then Resume with where it was left">
-  &nbsp;
-  <img src="docs/screenshots/phone-series.png" width="260" alt="A shared season on a phone, with Resume and the episode list">
-  &nbsp;
-  <img src="docs/screenshots/phone-password.png" width="260" alt="A password link on a phone">
-</p>
-
-The admin surface is one scannable index of every link handed out: what it points
-at, whether it is still live, how often it has been played, and when it expires.
-
-![The admin dashboard listing every share with its status, plays and expiry](docs/screenshots/admin-dashboard.png)
-
-<sub>The screenshots show a free film and a free series with their real
-metadata: [Sintel](https://durian.blender.org/) (Blender Foundation,
-[CC BY 3.0](https://creativecommons.org/licenses/by/3.0/); poster via
-[Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Sintel_poster.jpg))
-and [Pioneer One](https://archive.org/details/pioneer.one.season1.720p.x264-vodo)
-(Josh Bernhard and Bracey Smith,
-[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) as published
-there), whose artwork and stills are frames from the episodes. Episode summaries
-are from [Wikipedia](https://en.wikipedia.org/wiki/Pioneer_One)
-([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)). The other titles in
-the admin index are named only. The screenshots showing Pioneer One are shared
-under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/), and the
-episode summaries in them under
-[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).</sub>
+The public page is available in English and Thai, with Thai as the default.
 
 ## Features
 
 - **Temporary Share Links** - Create time-limited links that automatically expire
+- **Readable Links** - New links use a readable slug plus a random suffix, e.g.
+  `/s/mr-mrs-smith-s01-ep-01-2bf3cd802f25`; older random-token links keep working
 - **Password Protection** - Optionally protect shares with a password
 - **Play Limits** - Set maximum total plays and concurrent viewer limits
 - **No Account Required** - Recipients don't need a Jellyfin account
@@ -88,15 +38,24 @@ episode summaries in them under
 - **Secure Streaming** - Media is proxied through the backend; Jellyfin is never exposed
 - **Rich Metadata** - Displays poster, backdrop, ratings, cast, and more
 - **Admin Dashboard** - Create links, browse the Jellyfin library as a series →
-  season → episode tree, filter shares, edit terms, and revoke or delete links
-  one at a time or in bulk
+  season → episode tree, filter shares, edit terms, and revoke, restore,
+  duplicate or delete links one at a time or in bulk. The picker remembers the
+  last chosen item and the last eight shared items
+- **Analytics** - An Analytics tab with Overview and Links sub-tabs: totals, a
+  30-day views chart, and per-link views, unique viewers, average watch time and
+  plays
+- **Full Edit Coverage** - Change expiry, play and viewer limits, quality caps,
+  download permission and the password after creation
+- **QR and Copy Details** - Copy the link with its password and expiry in one
+  block, or show a QR code for phone hand-off
 - **Session Tracking** - Monitor active viewers and playback sessions
 - **HLS Streaming** - Segments are served through the backend, never from Jellyfin
 - **Browser-Compatible Playback** - The codec is negotiated with the viewer's browser,
   so an AV1 or HEVC library plays without being needlessly re-encoded for everyone
-- **Audio and Subtitle Tracks** - Selectable before playback; text subtitles are
-  delivered as a WebVTT sidecar, so the video needs no transcode and the viewer can
-  switch them off
+- **Audio and Subtitle Tracks** - Selectable below Play, always visible; text
+  subtitles are delivered as a WebVTT sidecar, so the video needs no transcode
+  and the viewer can switch them off. The first Thai track is selected by
+  default when one exists
 - **Downloads** - The original file of a film or episode, or a whole season or
   series as one ZIP filed by season. Each download counts as one play and, on a
   link with a play limit, asks first with the file's size and what it costs;
@@ -111,6 +70,10 @@ episode summaries in them under
   something plays on a TV the page says so and keeps track of where it is
 - **Per-Share Quality** - Cap a single link at 1080p, 720p or 480p without touching
   the library or the server settings
+- **Thai and English** - The public page, player and error page are available in
+  Thai and English, with Thai as the default and an EN/TH pill. Dates use Thai
+  month names with the Gregorian calendar, and track language names follow the
+  page language
 - **Designed Interface** - The share page leads with the artwork Jellyfin already
   holds and states the link's terms in plain language; the admin surface is a
   single scannable index. Both follow one locked design system
@@ -119,11 +82,25 @@ episode summaries in them under
   and works by keyboard and screen reader: focus returns to where it was after
   the player closes, and each control says what it does
 
+## Recent releases
+
+- **0.5.0** - Thai localization for the public page, player and error page, with
+  the EN/TH pill, Thai dates and Thai track names.
+- **0.4.0** - Renamed the project to Jellyshare: repo, module, image, containers,
+  database, env prefix, systemd units and browser keys.
+- **0.3.0** - Readable share URLs, Thai subtitle default, picker recents, and the
+  deferred-items review.
+- **0.2.0** - Analytics tab, QR and copy-details, visible track selectors, full
+  edit coverage, restore and duplicate.
+
+See the [releases](https://github.com/melth-cmd/jellyshare/releases) for the
+full notes.
+
 ## Architecture
 
 ```
 ┌─────────────┐     ┌─────────────────┐     ┌─────────────┐
-│   Viewer    │────▶│  JF Share API   │────▶│  Jellyfin   │
+│   Viewer    │────▶│ Jellyshare API  │────▶│  Jellyfin   │
 │  (Browser)  │◀────│   (Go + Svelte) │◀────│   Server    │
 └─────────────┘     └─────────────────┘     └─────────────┘
                             │
@@ -269,8 +246,9 @@ systemctl --user enable --now jellyshare-backup.timer
 systemctl --user list-timers jellyshare-backup.timer
 ```
 
-A user timer keeps running after logout only when lingering is enabled
-(`loginctl enable-linger "$USER"`).
+The unit assumes the checkout is at `~/jellyshare`; adjust `WorkingDirectory`
+and `ExecStart` if it is elsewhere. A user timer keeps running after logout only
+when lingering is enabled (`loginctl enable-linger "$USER"`).
 
 ### Restore
 
@@ -623,7 +601,7 @@ update through Vite. Production can keep running on 8097 at the same time.
 make dev-db-sync
 ```
 
-The dev backend binds to the LAN address so another machine can open the UI; set
+The dev backend binds to all interfaces so another machine can open the UI; set
 `DEV_HOST_IP` and `DEV_PUBLIC_BASE_URL` to override the defaults.
 
 ### Local demo
@@ -641,8 +619,7 @@ Jellyfin's setup wizard, creates an API key and starts the app on
 and jq, and keeps everything in `.local/` and `.env.local`, both ignored by git.
 The demo's libraries look nothing up online, so media dropped into
 `.local/media/movies` or `.local/media/shows` needs NFO files and local artwork
-(`poster.jpg`, `backdrop.jpg`); it shows up after a library refresh. That is how
-the screenshots at the top of this README were made.
+(`poster.jpg`, `backdrop.jpg`); it shows up after a library refresh. That is how the demo media is made.
 
 ### Working on the interface
 
@@ -662,10 +639,10 @@ Two rules that are easy to break by accident:
   on the page background where it reads at 9.1:1. Removing it makes the control
   unusable by keyboard.
 
-The three faces (Instrument Serif, Geist, Geist Mono) load from Google Fonts. An
-instance with no outbound internet access falls back to the system stack — the
-layout holds, but the typography is not what was designed. Self-host the fonts if
-that matters to you.
+The four faces (Instrument Serif, Geist, Geist Mono, IBM Plex Sans Thai) load
+from Google Fonts. An instance with no outbound internet access falls back to the
+system stack — the layout holds, but the typography is not what was designed.
+Self-host the fonts if that matters to you.
 
 ### Project Structure
 
@@ -680,11 +657,13 @@ that matters to you.
 │   ├── jellyfin/        # Jellyfin API client
 │   ├── middleware/      # Auth, rate limiting, sessions, request logging
 │   ├── models/          # Data models
-│   └── proxy/           # Stream, image & subtitle proxy
+│   ├── proxy/           # Stream, image & subtitle proxy
+│   └── slug/            # Readable share URL slugs
 ├── migrations/          # SQL migrations
-├── scripts/             # local-demo.sh: the local demo
+├── scripts/             # Backup, restore, dev sync and the local demo
 ├── web/
 │   └── src/
+│       ├── i18n/        # English and Thai dictionaries
 │       ├── tokens.css   # The design system's only source of colour/type/spacing
 │       └── components/  # Svelte components
 ├── design.md            # Locked design system — read before touching the UI
@@ -734,166 +713,104 @@ cd web && npm run build
 
 ## Notable changes
 
-These changes are included in this build. Every item was reproduced against a live
-Jellyfin before being fixed; the numbers are measured.
-
 **Security**
 
-- The Jellyfin API key was readable by anyone holding a share link. Jellyfin
-  echoes a request's query parameters back into the HLS manifests it generates,
-  and the proxy forwarded those verbatim, so `api_key` appeared in the
-  `master.m3u8` a viewer receives. The key taken from a playlist returned every
-  account with `IsAdministrator: true`. Now header-only.
-- Any share link could stream any item in the library: `ServeStream` took the
-  item id from the viewer's query string. A share for one film returned another
-  film's segments, 570 KB of real video. The item — and the media source, codec,
-  bitrate and track selection — is now pinned to the session at play time.
+- The Jellyfin API key never reaches the viewer. Jellyfin echoes request query
+  parameters into the HLS manifests it generates, so the proxy sends the key as a
+  header only and strips it from anything the browser receives.
+- Playback is pinned to the session. The item, media source, codec, bitrate and
+  track selection are resolved once when playback starts; the stream proxy never
+  takes them from a later request, so a share link cannot be pointed at another
+  item.
+- Forwarded client addresses are trusted only from a loopback or private reverse
+  proxy, and only the rightmost `X-Forwarded-For` value, so a direct client
+  cannot choose its own rate-limit bucket.
+- Admin key comparison is constant-time; request bodies are capped; password
+  guesses are limited to 10 per minute.
+- Unlock cookies are bound to the password hash they were issued for, so changing
+  a share password asks every viewer again.
+- Share tokens, session ids and download tickets are masked in request logs.
+- Admin responses are `no-store`; every response carries `nosniff`,
+  `SAMEORIGIN`, `no-referrer` and `noindex`, and HSTS is sent only over HTTPS.
+- Download tickets are HMAC-signed, expire after two hours, and carry the item
+  they were issued for, so a ticket cannot be pointed anywhere else.
+- Client IPs are hashed in audit logs; stale sessions are reaped; expired and
+  revoked links are deleted after the retention window.
+- `.env` is gitignored and `.dockerignore` keeps it out of the build context.
 
 **Playback**
 
-- Quality collapsed to 416x234 on any transcode, because no target bitrate was
-  sent and Jellyfin falls back to 128 kbit/s. The target is now derived from the
-  source and scaled for the codec being encoded into.
-- AV1 and HEVC reached the browser undecodable — stream-copied into mpegts, which
-  produced a black picture with audio only. The codec is now negotiated with the
-  viewer's browser: a source the browser can decode is still copied, byte for
-  byte.
-- Text subtitles are delivered as a WebVTT sidecar instead of being burned in, so
-  the video needs no re-encode and the viewer can switch them off.
-- Audio and subtitle tracks are selectable, and a share can carry its own quality
-  ceiling.
-- **Casting to a TV.**
-  - **Google Cast** works in **Chrome and other Chromium browsers only** (Edge,
-    Brave, Opera). Cast is a Chrome technology and Google publishes no interface
-    for other browsers, so the Cast button is absent in Safari and Firefox by
-    design, not by omission.
-  - **AirPlay** covers Safari instead, through Safari's own button in the player
-    controls once playback has started and an AirPlay target is on the network.
-  - **Firefox** has no casting route at all.
+- The codec is negotiated with the viewer's browser. A source the browser can
+  decode is stream-copied; only what it cannot decode is transcoded.
+- The transcode target bitrate is derived from the source instead of falling back
+  to Jellyfin's 128 kbit/s default.
+- Text subtitles are delivered as a WebVTT sidecar, so the video needs no
+  re-encode and the viewer can switch them off.
+- Audio and subtitle tracks are selectable below Play, always visible. The first
+  Thai track is selected by default when one exists.
+- Resume is kept per link, not per browser, so a film started on a phone resumes
+  on the laptop. The page says whose place it is and offers a restart.
+- Near the end of an episode a card offers the next one; it starts on its own
+  unless the viewer cancels. Autoplay works in the browser, on Google Cast and
+  over AirPlay.
+- Google Cast works in Chromium browsers; AirPlay works in Safari; Firefox has no
+  casting route. Both need HTTPS and a `JELLYSHARE_PUBLIC_BASE_URL` the TV can
+  reach.
+- Fullscreen goes to the page, not the video, so the next-episode card survives
+  and autoplay keeps working.
+- HLS segments are served through the backend, never directly from Jellyfin.
 
-  A season or series share has no single Play button, so casting is connected
-  once from above the episode list; every episode picked afterwards starts on the
-  receiver, and switching episodes releases the previous session rather than
-  leaving it to occupy a concurrent-viewer slot.
+**Downloads**
 
-- **Autoplay through a season.** When an episode ends the next one starts by
-  itself — in the browser, on a Cast receiver, and over AirPlay, which mirrors the
-  same element the browser path uses.
-
-  An episode started this way does not count against the share's play limit. A
-  link offered as "three plays" is meant to be three viewings, not three episodes,
-  and would otherwise die mid-season. The continuation is bounded so that
-  exemption cannot become an unlimited link: it must follow a session of the same
-  share that was alive moments ago, and a chain may not run longer than the share
-  has episodes — one play buys at most one pass through the series.
-
-  Both need the page served over **HTTPS** — browsers dropped the Presentation API
-  on plain HTTP — and `JELLYSHARE_PUBLIC_BASE_URL` must be an address the receiving
-  device can reach, since it fetches the stream itself rather than relaying it
-  through the browser. The Cast button is hidden on an insecure origin, with one
-  exception: browsers treat `localhost` as secure, so it appears there and then
-  hands the receiver a `localhost` URL it cannot resolve.
-
-**Downloads, resume and the next episode**
-
-- **Downloads.** A film or an episode can be saved as the original file, and a
-  season or series as one ZIP filed by season. Each download costs one play, so a
-  limited link cannot be bypassed by saving the file; a whole-series ZIP costs one
-  as well. Whoever shares a link chooses whether it offers downloads (on by
-  default), and the server can switch them off for every link. A download is
-  always the original file: a share's quality cap applies to streaming only.
-- **Resume.** The server remembers where a link was left - per film and per
-  episode - so a film started on a phone resumes on the laptop. The page then
-  offers *Resume* with the time, a line saying whose place that is, and a link
-  to start that film or episode over; a series picks up on the episode last
-  watched, or on the next one once that was finished. Each episode row shows
-  how much of it has been seen, and a film or episode watched to the end is
-  ticked. The progress belongs to the link, not to a person: everyone holding
-  the same link shares it.
-  - The playing page reports its position with every heartbeat, when the tab
-    closes or goes to the background, and when playback stops.
-  - **AirPlay** plays through the page's own video element, so its position is
-    reported the same way.
-  - **Google Cast**: the page sends the receiver's position with its cast
-    heartbeats, and an episode that runs out on the TV counts as watched - as
-    long as the receiver or the library knows how long it runs. The page has to
-    stay open while casting; it already must, to keep the cast session alive.
-- **Next episode.** In an episode's last 30 seconds a card in the bottom-right
-  corner names the next one. *Play now* starts it at once; left alone it starts
-  when the episode ends; *Cancel* or the close button returns to the episode list.
-  When a film or the last episode ends, the page returns to the share page and
-  leaves fullscreen.
-
-  On a desktop the card stays visible in fullscreen because fullscreen goes to
-  the whole page - a fullscreen `<video>` element hides everything the page draws
-  over it - and it carries on from one episode to the next. That takes the
-  player's own fullscreen button, which in Chrome, Edge and other Chromium
-  browsers replaces the video's; double-clicking the picture and the F key do
-  the same. Safari and Firefox keep their native control, which fullscreens the
-  video alone: no card there, and fullscreen ends when the next episode starts.
-  F still gives the page fullscreen in those browsers. Phones and tablets keep
-  their native control too, since it is what turns the picture to landscape;
-  autoplay moves on to the next episode everywhere.
-
-**Fixes**
-
-- Series shares listed seasons and could not play any of them.
-- Share analytics always returned 500 — the query named a table and a column that
-  do not exist.
-- `JELLYSHARE_PORT` was ignored by the healthcheck, leaving the container
-  permanently unhealthy.
-- Shares can be created without an expiry.
-- Episode stills were linked from the episode list but never routed, so every
-  one of them failed to load.
-- Episode overviews never reached the page: Jellyfin leaves an item's overview
-  out of a list unless the request asks for it, and the episode list did not.
-- The admin index loaded the newest 100 links and silently dropped the rest,
-  and its counts covered only those.
-- Stream segments counted against the API's rate limit despite a comment saying
-  otherwise. Images and segments now have their own limit, ten times the API's,
-  so a page of stills cannot lock a viewer out of Play.
-- There was no `.dockerignore`, so every build sent the `.env` files holding
-  API keys to the builder, and `COPY . .` copied them into the build stage.
-
-**Interface**
-
-- The viewer page and the admin surface were redesigned around one system
-  ([`design.md`](design.md)). The palette is anchored on Jellyfin's own accent
-  `#00a4dc` so a share link reads as part of the server it came from; contrast
-  ratios are computed from the OKLCH values rather than eyeballed.
-- The share page leads with the artwork and states the link's terms in words —
-  how long it lasts, how many plays remain — instead of a row of badges. The
-  headline sits above Play, and the last play says what it costs before it is
-  spent.
-- Refusals are sentences: what happened, whether a play was used, what to do
-  next. Player and Cast errors drop their codes, and a link that no longer opens
-  says whether it was revoked or expired, and when.
-- A link with no plays left says so first and keeps its episodes as a record,
-  instead of a dimmed Play surrounded by controls that could only fail.
-- Resume says whose place it goes back to, since a link's progress is shared by
-  everyone who holds it. A season share is titled by its show, with the season
-  beneath it.
-- On a phone every action takes a full line, a long Resume label grows a second
-  line rather than running off the screen, and a password link keeps its field
-  above the keyboard.
-- Keyboard and screen reader: focus returns to what was playing when the player
-  closes, every view has its landmarks, and an episode's overview is read as
-  its row's description.
-- The admin dashboard is an index rather than a table: it restacks on a phone
-  instead of scrolling sideways, and revoking asks in the row it affects rather
-  than through a browser `confirm()` that paints over the page.
-- Absolute timestamps render in the reader's own timezone, named — not as a bare
-  UTC string.
-- Every emitted page was rendered and measured at 320, 375, 414, 768 and 1280 px.
+- A film or episode downloads as the original file; a season or series downloads
+  as one ZIP filed by season.
+- Each download counts as one play. On a link with a play limit, the page asks
+  first with the file's size and what it costs.
+- Downloads can be switched off per link, and the server can switch them off for
+  every link.
+- A download ticket is valid for two hours and supports Range requests, so an
+  interrupted download resumes without being charged again.
+- The ZIP is stored uncompressed, files episodes by season, and leaves out
+  episodes the library lists without a file.
+- A download takes no concurrent-viewer slot. A share's quality cap applies to
+  streaming only; the download is always the original file.
 
 **Compatibility**
 
-Works against Jellyfin 10.11 and 12.x with the same build.
+- Jellyfin 10.11 and 12.x with the same build.
+- Go 1.27, Node 20, PostgreSQL 16, Svelte 5, Vite 7 and hls.js 1.7.
+- Chrome, Edge, Brave and Opera for Google Cast; Safari for AirPlay; Firefox for
+  playback without casting.
+- Phones and tablets keep their native fullscreen control, which also turns the
+  picture to landscape.
+- The public page is available in English and Thai, with Thai as the default.
+- No database schema changes in 0.2.0–0.5.0; upgrades are image-tag changes.
+
+**Interface**
+
+- The viewer page and the admin surface follow one locked design system
+  ([`design.md`](design.md)), anchored on Jellyfin's own accent colour.
+- The share page leads with the artwork and states the link's terms in words:
+  what is left, until when, and what the next tap costs.
+- Refusals are sentences: what happened, whether a play was used, and what to do
+  next. A dead link says whether it was revoked or expired, and when.
+- A spent link says so first and keeps its episodes as a record instead of
+  offering controls that could only fail.
+- Resume says whose place it goes back to; a season share is titled by its show.
+- On a phone every action takes a full line, and a password link keeps its field
+  above the keyboard.
+- Keyboard and screen reader: focus returns to what was playing when the player
+  closes, every view has its landmarks, and an episode's overview is read as its
+  row's description.
+- The admin dashboard is an index rather than a table: it restacks on a phone,
+  revoking asks in the row it affects, and the picker remembers recent items.
+- The admin has Create, Shares and Analytics tabs; Analytics has Overview and
+  Links sub-tabs with totals, a 30-day chart and per-link usage.
+- New links use a readable slug plus a random suffix; older random-token links
+  keep working.
+- The public page has an EN/TH pill, Thai dates with the Gregorian calendar, and
+  Thai track language names.
 
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.

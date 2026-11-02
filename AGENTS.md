@@ -23,11 +23,11 @@ Run these from the repo root.
 go build ./...
 go test ./...
 
-# Frontend (Svelte 4 + Vite)
+# Frontend (Svelte 5 + Vite)
 cd web && npm install && npm run build
 
 # Dev stack (Docker, hot reload)
-make dev-up          # backend localhost:8098, frontend :5173
+make dev-up          # backend <host-ip>:8098, frontend :5173
 make dev-logs
 make dev-down
 
@@ -67,7 +67,7 @@ changes run the frontend build. Mention in your summary which checks you ran.
   public share pages. Do not rename them casually.
 - New migrations use the next number, e.g. `000013_...up.sql` with a matching
   `.down.sql`.
-- Frontend is Svelte 4, plain JavaScript, no TypeScript. Match the existing
+- Frontend is Svelte 5, plain JavaScript, no TypeScript. Match the existing
   component style and reuse `tokens.css` variables.
 - Admin endpoints are under `/api/admin` and require `X-Backend-Key`.
 

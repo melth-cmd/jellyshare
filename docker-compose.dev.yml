@@ -14,10 +14,10 @@ services:
       - go-build-cache:/root/.cache/go-build
       - node-modules:/workspace/web/node_modules
     ports:
-      # Bound to the LAN address so another machine can reach the dev UI.
+      # Bound to all interfaces so another machine can reach the dev UI.
       # Production keeps 8097; the dev stack uses 8098.
-      - "${DEV_HOST_IP:-localhost}:8098:8097"
-      - "${DEV_HOST_IP:-localhost}:5173:5173"
+      - "${DEV_HOST_IP:-0.0.0.0}:8098:8097"
+      - "${DEV_HOST_IP:-0.0.0.0}:5173:5173"
     environment:
       - JELLYSHARE_ENV=development
       - JELLYSHARE_PORT=8097
