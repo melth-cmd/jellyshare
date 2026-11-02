@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"log"
@@ -14,6 +15,7 @@ import (
 	"github.com/melth-cmd/jellyfin-share-backend/internal/jellyfin"
 	"github.com/melth-cmd/jellyfin-share-backend/internal/middleware"
 	"github.com/melth-cmd/jellyfin-share-backend/internal/models"
+	"github.com/melth-cmd/jellyfin-share-backend/internal/slug"
 )
 
 type AdminHandler struct {
@@ -30,6 +32,28 @@ func NewAdminHandler(db *database.DB, jf *jellyfin.Client, cfg *config.Config, s
 		cfg:      cfg,
 		sessions: sessions,
 	}
+}
+
+// shareToken builds the public token for an item: a readable slug and a random
+// 12-hex suffix. The suffix is what keeps the link unguessable.
+func shareToken(item *jellyfin.ItemInfo) string {
+	return slug.Build(slug.Item{
+		Type:              item.Type,
+		Name:              item.Name,
+		SeriesName:        item.SeriesName,
+		IndexNumber:       item.IndexNumber,
+		ParentIndexNumber: item.ParentIndexNumber,
+	}) + "-" + middleware.GenerateSecureToken(12)
+}
+
+// duplicateToken rebuilds the source item's slug so a copy reads like the
+// original. If Jellyfin no longer has the item, the stored title is the best
+// available fallback.
+func (h *AdminHandler) duplicateToken(ctx context.Context, source *models.Share) string {
+	if item, err := h.jf.GetItem(ctx, source.JellyfinItemID); err == nil {
+		return shareToken(item)
+	}
+	return slug.Build(slug.Item{Name: source.Title}) + "-" + middleware.GenerateSecureToken(12)
 }
 
 func (h *AdminHandler) CreateShare(w http.ResponseWriter, r *http.Request) {
@@ -72,8 +96,9 @@ func (h *AdminHandler) CreateShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate share token
-	publicToken := middleware.GenerateSecureToken(24)
+	// A readable slug plus a random suffix: the slug makes the link easy to
+	// recognise, the suffix keeps it as unguessable as the old random token.
+	publicToken := shareToken(item)
 
 	share := &models.Share{
 		ID:             uuid.New(),
@@ -495,7 +520,7 @@ func (h *AdminHandler) DuplicateShare(w http.ResponseWriter, r *http.Request) {
 
 	duplicate := *source
 	duplicate.ID = uuid.New()
-	duplicate.PublicToken = middleware.GenerateSecureToken(24)
+	duplicate.PublicToken = h.duplicateToken(r.Context(), source)
 	duplicate.CreatedAt = time.Now()
 	duplicate.TotalPlays = 0
 	duplicate.CurrentConcurrentViewers = 0
