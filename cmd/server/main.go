@@ -33,6 +33,9 @@ func main() {
 	if cfg.BackendAPIKey == "" {
 		log.Fatal("JFSHARE_BACKEND_API_KEY is required")
 	}
+	for _, warning := range cfg.Warnings() {
+		log.Printf("WARNING: %s", warning)
+	}
 
 	// Initialize database
 	db, err := database.New(cfg.DatabaseDSN)

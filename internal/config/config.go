@@ -3,10 +3,12 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
 type Config struct {
+	Environment             string
 	Port                    int
 	DatabaseDSN             string
 	JellyfinBaseURL         string
@@ -37,6 +39,7 @@ type Config struct {
 
 func Load() *Config {
 	return &Config{
+		Environment:             getEnv("JFSHARE_ENV", "production"),
 		Port:                    getEnvInt("JFSHARE_PORT", 8097),
 		DatabaseDSN:             getEnv("JFSHARE_DB_DSN", "postgres://jfshare:jfshare@localhost:5432/jfshare?sslmode=disable"),
 		JellyfinBaseURL:         getEnv("JFSHARE_JELLYFIN_BASE_URL", "http://localhost:8096"),
@@ -53,6 +56,35 @@ func Load() *Config {
 		AllowDownloads:          getEnvBool("JFSHARE_ALLOW_DOWNLOADS", true),
 		ShareRetentionDays:      getEnvInt("JFSHARE_SHARE_RETENTION_DAYS", 365),
 	}
+}
+
+// IsProduction reports whether startup warnings should be applied. Development
+// is the only value that relaxes them; anything else is treated as production.
+func (c *Config) IsProduction() bool {
+	return !strings.EqualFold(c.Environment, "development")
+}
+
+// Warnings returns configuration problems that are not fatal but are unsafe for
+// an internet-facing deployment. It never includes a secret value.
+func (c *Config) Warnings() []string {
+	if !c.IsProduction() {
+		return nil
+	}
+
+	warnings := []string{}
+	if len(c.BackendAPIKey) < 32 {
+		warnings = append(warnings, "JFSHARE_BACKEND_API_KEY is shorter than 32 bytes; generate one with: openssl rand -hex 32")
+	}
+	if !strings.HasPrefix(strings.ToLower(c.PublicBaseURL), "https://") {
+		warnings = append(warnings, "JFSHARE_PUBLIC_BASE_URL is not HTTPS; public links and the admin key will travel in clear text")
+	}
+	if strings.Contains(c.DatabaseDSN, "jfshare:jfshare@") {
+		warnings = append(warnings, "the database connection still uses the default jfshare:jfshare password")
+	}
+	if !strings.EqualFold(c.Environment, "production") && !strings.EqualFold(c.Environment, "development") {
+		warnings = append(warnings, "JFSHARE_ENV is not 'production' or 'development'; treating it as production")
+	}
+	return warnings
 }
 
 func getEnv(key, defaultValue string) string {

@@ -19,6 +19,7 @@ services:
       - "${DEV_HOST_IP:-192.168.1.133}:8098:8097"
       - "${DEV_HOST_IP:-192.168.1.133}:5173:5173"
     environment:
+      - JFSHARE_ENV=development
       - JFSHARE_PORT=8097
       - JFSHARE_DB_DSN=postgres://jfshare:jfshare@postgres:5432/jfshare?sslmode=disable
       - JFSHARE_JELLYFIN_BASE_URL=${JELLYFIN_URL:-http://host.docker.internal:8096}
