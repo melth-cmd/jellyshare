@@ -7,7 +7,7 @@ version: '3.8'
 
 services:
   jfshare:
-    image: ghcr.io/melth-cmd/jellyfin-share-backend:0.1.1
+    image: ghcr.io/melth-cmd/jellyfin-share-backend:0.1.2
     container_name: jfshare
     restart: unless-stopped
     ports:
