@@ -18,7 +18,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@400;500&family=Instrument+Serif&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap"
     />
     <link rel="stylesheet" href="/src/tokens.css" />
 
@@ -69,6 +69,22 @@
         <p class="boot__label">Opening the link</p>
       </main>
     </div>
+    <script>
+      // The boot label is painted before Svelte mounts, so it reads the stored
+      // locale itself. Thai copy is filled in with the first translation batch.
+      (function () {
+        var locale = 'th';
+        try {
+          var stored = localStorage.getItem('jellyshare_locale');
+          if (stored === 'en' || stored === 'th') locale = stored;
+        } catch (e) {}
+        document.documentElement.lang = locale;
+        var label = document.querySelector('.boot__label');
+        if (label) {
+          label.textContent = locale === 'th' ? 'Opening the link' : 'Opening the link';
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

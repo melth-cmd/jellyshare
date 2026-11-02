@@ -55,9 +55,12 @@
   --bloom:             oklch(67.5% 0.137 232 / 0.15);
 
   /* ---- Type ---- */
-  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
-  --font-body:    "Geist", ui-sans-serif, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-outlier: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Thai falls through to IBM Plex Sans Thai wherever the Latin faces have no
+     glyphs. Display headings use the same Thai face at a heavier weight. */
+  --font-thai:    "IBM Plex Sans Thai", "Noto Sans Thai", sans-serif;
+  --font-display: "Instrument Serif", var(--font-thai), ui-serif, Georgia, serif;
+  --font-body:    "Geist", var(--font-thai), ui-sans-serif, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-outlier: "Geist Mono", var(--font-thai), ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* 1.25 major third off a 16px body */
   --text-xs:   0.64rem;

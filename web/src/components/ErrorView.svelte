@@ -1,5 +1,6 @@
 <script>
   import BrandMark from './BrandMark.svelte';
+  import LocalePill from './LocalePill.svelte';
   export let error;
 
   // Errors name what broke, then what to do about it. No apology, no emoji, and
@@ -64,6 +65,7 @@
 <div class="error bloom-ground">
   <header class="nav">
     <span class="wordmark"><BrandMark />Jellyshare</span>
+    <LocalePill />
   </header>
 
   <main class="error__body">

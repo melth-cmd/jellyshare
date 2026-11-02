@@ -6,6 +6,7 @@
   import DownloadIcon from './DownloadIcon.svelte';
   import CheckIcon from './CheckIcon.svelte';
   import BrandMark from './BrandMark.svelte';
+  import LocalePill from './LocalePill.svelte';
   import { initCast, ensureCastSession, loadOnCast, stopCast, describeCastError, onCastEnded,
            toBcp47, languageName, subtitlesDropped, castApiReady, castConnected,
            castDeviceName, castProgress, tvHint } from '../cast.js';
@@ -1125,6 +1126,7 @@
            once, in the headline above the controls. -->
       <header class="nav">
         <span class="wordmark"><BrandMark />Jellyshare</span>
+        <LocalePill />
       </header>
 
       <div class="plate">
