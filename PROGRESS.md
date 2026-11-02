@@ -555,3 +555,16 @@ pass.
   logs; security headers and HTTPS-only HSTS were added; read-header timeout
   set. Live checks: headers, password rotation invalidating the old cookie,
   mask in logs, and 404 for a dead share's poster. `.env` tightened to 0600.
+
+### 2026-11-02
+
+- #12 closed as not planned: batch selection in the picker is not worth the
+  selection state, nested-combination rules and partial-failure reporting for
+  the current family workflow. Revisit only if sharing several specific
+  episodes becomes a recurring need.
+- #30 done: the public share page now defaults the subtitle menu to the first
+  Thai track. Detection accepts `th`, `tha`, `th-*`, or a display title
+  containing `Thai`/`ไทย`; the first match in Jellyfin's order wins, and no
+  Thai track leaves the menu on None. Once the viewer changes the menu -
+  including choosing None - the default never reapplies. Verified in jsdom for
+  language-tagged Thai, title-only Thai, no Thai, and explicit None.
