@@ -487,6 +487,10 @@ pass.
 - Steps 8 and 9 done: empty/error/disclosure copy polished, docs rewritten to
   match the built admin flow, and a scripted end-to-end pass covered movie,
   series, season, episode, password, play-limit, bulk, and cleanup paths.
+- Fixed the blank admin page after the Svelte 5 upgrade: `main.js` still used the
+  Svelte 4 `new App({ target })` API. It now uses `mount(App, { target })`.
+  Verified by rendering the production bundle in jsdom: the admin login page
+  mounts instead of staying on the boot screen. Cutting v0.1.2 for this fix.
 - **v0.1.1 released** (`779b8d6` + tag) with the deployment checklist, startup
   warnings, Go 1.27, frontend Svelte 5/Vite 7, CI scans, dependency updates,
   backups, and the pinned `0.1.1` image. Release workflow and image build passed.
