@@ -662,3 +662,9 @@ pass.
   translated into Thai in six reviewed batches. Added the EN/TH pill (default
   Thai, persisted), IBM Plex Sans Thai, Thai track language names, and Thai
   dates with the Gregorian calendar. Admin stays English. Prepared `v0.5.0`.
+- **v0.5.0 released and deployed** (`ba49b22` + tag): Thai localization for the
+  public share page, player, error page and cast messages, with the EN/TH pill,
+  IBM Plex Sans Thai, Thai track names and Thai dates. Image digest
+  `sha256:0d20250e03010ff97f86d26f55b23bafb49be756f3aa738766893a04247a5207`;
+  production is healthy on `0.5.0`, and an old 24-hex token still returns 200.
+  The 0.5.0 milestone is closed.
