@@ -1,6 +1,6 @@
 # Localization plan — Thai for the public share page
 
-Status: in progress. Scaffolding and Batch 1 are applied.
+Status: complete. All six batches are applied.
 
 ## Scope
 

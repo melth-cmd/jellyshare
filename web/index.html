@@ -78,10 +78,11 @@
           var stored = localStorage.getItem('jellyshare_locale');
           if (stored === 'en' || stored === 'th') locale = stored;
         } catch (e) {}
-        document.documentElement.lang = locale;
+        var isAdmin = location.pathname === '/admin' || location.pathname.indexOf('/admin/') === 0;
+        document.documentElement.lang = isAdmin ? 'en' : locale;
         var label = document.querySelector('.boot__label');
         if (label) {
-          label.textContent = locale === 'th' ? 'กำลังเปิดลิงก์' : 'Opening the link';
+          label.textContent = isAdmin ? 'Opening the link' : (locale === 'th' ? 'กำลังเปิดลิงก์' : 'Opening the link');
         }
       })();
     </script>
