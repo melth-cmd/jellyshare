@@ -487,9 +487,17 @@ pass.
 - Steps 8 and 9 done: empty/error/disclosure copy polished, docs rewritten to
   match the built admin flow, and a scripted end-to-end pass covered movie,
   series, season, episode, password, play-limit, bulk, and cleanup paths.
+- **v0.2.0 released and deployed** (`28db8f9` + tag): analytics tab, QR/copy
+  details, visible track pickers, full edit coverage, restore and duplicate.
+  Image digest `sha256:fdf9dc60359f75291cf6d6ba59d9e371008d5df57f2d292dc5e8932cf36ce720`;
+  production is healthy on `0.2.0`. The 0.2.0 milestone is closed.
 - **v0.2.0 scope complete**: analytics tab, QR/copy details, visible track pickers,
   full edit coverage, restore and duplicate. Remaining 0.2.0 items moved to
   0.3.0; Thai localization moved to 0.4.0.
+- New 0.3.0 issues: #29 human-readable share URLs (slug + random suffix) and
+  #30 default the share page to the first Thai subtitle track. Remaining 0.2.0
+  items (#7, #12, #13, #14) moved to 0.3.0; Thai localization #16 moved to the
+  new 0.4.0 milestone.
 - #10 done: the edit dialog now changes download permission, maximum picture and
   maximum bitrate; `PATCH /api/admin/shares/{id}` accepts `allowDownload`,
   `maxVideoHeight` and `maxVideoBitrate` (0 clears a cap). The list exposes the
