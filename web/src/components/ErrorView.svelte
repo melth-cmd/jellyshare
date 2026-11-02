@@ -1,63 +1,78 @@
 <script>
   import BrandMark from './BrandMark.svelte';
   import LocalePill from './LocalePill.svelte';
+  import { t } from '../i18n/index.js';
+
   export let error;
 
   // Errors name what broke, then what to do about it. No apology, no emoji, and
   // no status codes or server strings: those are for logs, not for whoever
   // opened the link.
-  const errorMessages = {
-    404: {
-      title: 'Not found',
-      description: 'This link doesn’t point at anything. Chat apps sometimes cut a link short, so check you opened all of it.',
-      action: 'If it is complete, ask whoever shared it for a new link.'
-    },
-    410: {
-      title: 'No longer available',
-      description: 'This link has expired, or whoever shared it switched it off.',
-      action: 'Ask whoever shared it for a new link.'
-    },
-    403: {
-      title: 'Access denied',
-      description: 'This link exists, but it doesn’t grant access to that content.',
-      action: 'Check you opened the full link, including everything after the last slash.'
-    },
-    0: {
-      title: 'Couldn’t reach the server',
-      description: 'The page loaded, but the server behind it didn’t answer.',
-      action: 'Check your connection and reload the page.'
-    },
-    default: {
-      title: 'Couldn’t load the link',
-      description: 'The server answered, but not with a link.',
-      action: 'Reload the page. If it keeps failing, let whoever shared it know.'
-    }
-  };
+  function messages(translate) {
+    return {
+      404: {
+        title: translate('error.404.title'),
+        description: translate('error.404.body'),
+        action: translate('error.404.action')
+      },
+      410: {
+        title: translate('error.410.title'),
+        description: translate('error.410.body'),
+        action: translate('error.410.action')
+      },
+      403: {
+        title: translate('error.403.title'),
+        description: translate('error.403.body'),
+        action: translate('error.403.action')
+      },
+      0: {
+        title: translate('error.offline.title'),
+        description: translate('error.offline.body'),
+        action: translate('error.offline.action')
+      },
+      default: {
+        title: translate('error.default.title'),
+        description: translate('error.default.body'),
+        action: translate('error.default.action')
+      }
+    };
+  }
 
-  // Same day-month order and 24-hour clock as the share page.
+  // Same day-month order and 24-hour clock as the share page. The locale and
+  // calendar are localized in the formatting batch.
   const when = new Intl.DateTimeFormat('en-GB', {
     day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
   });
 
   // A link that ran out says which one, why and since when - the server knows,
   // so the page does not make the viewer guess between causes.
-  function goneMessage(gone) {
+  function goneMessage(gone, translate) {
     const at = new Date(gone.endedAt);
-    const date = Number.isNaN(at.getTime()) ? '' : ` on ${when.format(at)}`;
+    const date = Number.isNaN(at.getTime())
+      ? ''
+      : translate('error.gone.onDate', { date: when.format(at) });
     const name = [gone.seriesName, gone.title].filter(Boolean).join(', ');
-    const link = name ? `The link to ${name}` : 'This link';
+    const link = name ? translate('error.gone.linkTo', { name }) : translate('error.gone.thisLink');
     if (gone.reason === 'revoked') {
-      return { title: 'Switched off', description: `${link} was switched off by whoever shared it${date}.`, action: errorMessages[410].action };
+      return {
+        title: translate('error.gone.revoked.title'),
+        description: translate('error.gone.revoked', { link, date }),
+        action: translate('error.410.action')
+      };
     }
     if (gone.reason === 'expired') {
-      return { title: 'This link has expired', description: `${link} expired${date}.`, action: errorMessages[410].action };
+      return {
+        title: translate('error.gone.expired.title'),
+        description: translate('error.gone.expired', { link, date }),
+        action: translate('error.410.action')
+      };
     }
-    return errorMessages[410];
+    return messages(translate)[410];
   }
 
   $: errorInfo = error?.gone
-    ? goneMessage(error.gone)
-    : errorMessages[error?.status] || errorMessages.default;
+    ? goneMessage(error.gone, $t)
+    : messages($t)[error?.status] || messages($t).default;
 </script>
 
 <svelte:head><title>{errorInfo.title} · Jellyshare</title></svelte:head>
@@ -75,7 +90,7 @@
   </main>
 
   <footer class="foot">
-    <p>Shared via <a class="foot-link" href="https://github.com/melth-cmd/jellyshare" target="_blank" rel="noopener noreferrer">Jellyshare</a></p>
+    <p>{$t('footer.sharedVia')} <a class="foot-link" href="https://github.com/melth-cmd/jellyshare" target="_blank" rel="noopener noreferrer">Jellyshare</a></p>
   </footer>
 </div>
 

@@ -1,6 +1,6 @@
 # Localization plan — Thai for the public share page
 
-Status: planning. Nothing is translated yet.
+Status: in progress. Scaffolding and Batch 1 are applied.
 
 ## Scope
 
@@ -115,6 +115,16 @@ These come from Jellyfin or are not language:
 - Clock: “1:00 of 2:00”.
 - Dates: absolute date/time, “on {date}”, “in N days”.
 - Bytes: KB/MB/GB/TB.
+
+## Progress
+
+- [x] Scaffolding: dictionaries, locale store, `t()`, EN/TH pill, font, boot label.
+- [x] Batch 1: shell, errors, gone-link page, footer, pill label.
+- [ ] Batch 2: password gate and link terms.
+- [ ] Batch 3: playback controls and downloads.
+- [ ] Batch 4: player chrome.
+- [ ] Batch 5: cast messages and language names.
+- [ ] Batch 6: metadata labels and formatting.
 
 ## Batch workflow
 

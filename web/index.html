@@ -71,7 +71,7 @@
     </div>
     <script>
       // The boot label is painted before Svelte mounts, so it reads the stored
-      // locale itself. Thai copy is filled in with the first translation batch.
+      // locale itself.
       (function () {
         var locale = 'th';
         try {
@@ -81,7 +81,7 @@
         document.documentElement.lang = locale;
         var label = document.querySelector('.boot__label');
         if (label) {
-          label.textContent = locale === 'th' ? 'Opening the link' : 'Opening the link';
+          label.textContent = locale === 'th' ? 'กำลังเปิดลิงก์' : 'Opening the link';
         }
       })();
     </script>

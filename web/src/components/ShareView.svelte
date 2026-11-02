@@ -13,6 +13,7 @@
   import { MAIN, emptyProgress, loadProgress, noteProgress, resumePosition, seriesResumeTarget,
            watchedFraction, isWatched, formatClock } from '../progress.js';
   import { fullscreenElement, exitFullscreen } from '../fullscreen.js';
+  import { t } from '../i18n/index.js';
 
   export let shareInfo;
   export let token;
@@ -1600,7 +1601,7 @@
 {#if !playerOpen}
   <footer class="foot">
     <p>
-      Shared via <a class="foot-link" href="https://github.com/melth-cmd/jellyshare" target="_blank" rel="noopener noreferrer">Jellyshare</a>
+      {$t('footer.sharedVia')} <a class="foot-link" href="https://github.com/melth-cmd/jellyshare" target="_blank" rel="noopener noreferrer">Jellyshare</a>
     </p>
   </footer>
 {/if}
