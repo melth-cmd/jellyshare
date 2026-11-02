@@ -458,12 +458,16 @@ pass.
 
 ### 0.5.0 — viewer localization
 
-**Thai for the public share page** *(#16)*
-- Translate only the viewer-facing `/s/{token}` experience and player chrome:
+**Thai for the public share page** *(#16)* — done.
+- Translated the viewer-facing `/s/{token}` experience and player chrome:
   password gate, Play/Resume/Download, terms, refusals, dead links, downloads
   and cast notes. Admin stays English.
-- Default the link page to Thai; add Thai-capable fonts through the existing
-  tokens, and pin the date locale/calendar explicitly.
+- Added an EN/TH pill on the share and error pages, defaulting to Thai and
+  persisted in `localStorage`.
+- Added IBM Plex Sans Thai through the existing font tokens; Latin text keeps
+  Geist and Instrument Serif.
+- Dates use Thai month names with the Gregorian calendar; track language names
+  follow the page language.
 - Done when a Thai-speaking viewer can use a link, including its errors, without
   falling back to English.
 
@@ -654,3 +658,7 @@ pass.
   `%h/jellyshare`; the dev stack was recreated and synced from
   production. Health, admin, analytics, the external URL and an old 24-hex share
   token all return 200. The 0.4.0 milestone is closed.
+- #16 done: the public share page, player, error page and cast messages are
+  translated into Thai in six reviewed batches. Added the EN/TH pill (default
+  Thai, persisted), IBM Plex Sans Thai, Thai track language names, and Thai
+  dates with the Gregorian calendar. Admin stays English. Prepared `v0.5.0`.
