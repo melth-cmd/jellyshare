@@ -107,7 +107,7 @@ prod-logs:
 # Local fallback when the GHCR package is not reachable from this host.
 # Normal upgrades use the pinned image and `make prod-up`.
 prod-rebuild:
-	docker build -t ghcr.io/melth-cmd/jellyfin-share-backend:0.1.2 .
+	docker build -t ghcr.io/melth-cmd/jellyfin-share-backend:0.2.0 .
 	docker-compose up -d jfshare
 
 # =============================================================================

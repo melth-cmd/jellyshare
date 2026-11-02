@@ -487,6 +487,9 @@ pass.
 - Steps 8 and 9 done: empty/error/disclosure copy polished, docs rewritten to
   match the built admin flow, and a scripted end-to-end pass covered movie,
   series, season, episode, password, play-limit, bulk, and cleanup paths.
+- **v0.2.0 scope complete**: analytics tab, QR/copy details, visible track pickers,
+  full edit coverage, restore and duplicate. Remaining 0.2.0 items moved to
+  0.3.0; Thai localization moved to 0.4.0.
 - #10 done: the edit dialog now changes download permission, maximum picture and
   maximum bitrate; `PATCH /api/admin/shares/{id}` accepts `allowDownload`,
   `maxVideoHeight` and `maxVideoBitrate` (0 clears a cap). The list exposes the
