@@ -120,7 +120,7 @@ These come from Jellyfin or are not language:
 
 - [x] Scaffolding: dictionaries, locale store, `t()`, EN/TH pill, font, boot label.
 - [x] Batch 1: shell, errors, gone-link page, footer, pill label.
-- [ ] Batch 2: password gate and link terms.
+- [x] Batch 2: password gate and link terms.
 - [ ] Batch 3: playback controls and downloads.
 - [ ] Batch 4: player chrome.
 - [ ] Batch 5: cast messages and language names.

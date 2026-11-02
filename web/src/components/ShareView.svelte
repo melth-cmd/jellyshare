@@ -13,7 +13,7 @@
   import { MAIN, emptyProgress, loadProgress, noteProgress, resumePosition, seriesResumeTarget,
            watchedFraction, isWatched, formatClock } from '../progress.js';
   import { fullscreenElement, exitFullscreen } from '../fullscreen.js';
-  import { t } from '../i18n/index.js';
+  import { locale, t } from '../i18n/index.js';
 
   export let shareInfo;
   export let token;
@@ -204,33 +204,37 @@
   // this warns rather than blocks.
   $: viewersFull = viewerLimit !== null && shareInfo.currentConcurrentViewers >= viewerLimit;
 
-  $: playsCount = playLimit ? `${playsLeft} of ${playLimit} ${playLimit === 1 ? 'play' : 'plays'} left` : '';
+  $: playsCount = playLimit
+    ? $t('terms.playsLeft', { left: playsLeft, total: playLimit, count: playLimit })
+    : '';
 
   // The headline of the terms: what is left and until when, in one line at
   // reading size above the button that spends it. The finer print sits below.
   $: playsHead = !playLimit
     ? ''
     : playsUsedUp
-      ? 'No plays left'
+      ? $t('terms.noPlaysLeft')
       : lastPlay
-        ? (playLimit === 1 ? 'One play' : `Last of ${playLimit} plays`)
+        ? (playLimit === 1 ? $t('terms.onePlay') : $t('terms.lastOfPlays', { count: playLimit }))
         : playsCount;
-  $: expiryHead = shareInfo.expiresAt ? `expires ${expiryWords(shareInfo.expiresAt)}` : 'no expiry';
+  $: expiryHead = shareInfo.expiresAt
+    ? $t('terms.expires', { when: expiryWords(shareInfo.expiresAt, $t) })
+    : $t('terms.noExpiry');
   // The headline is the one place the terms are stated, so the exact moment
   // rides along under it rather than in a second and third spot on the page.
   $: expiryExact = shareInfo.expiresAt ? formatAbsolute(shareInfo.expiresAt) : '';
-  const capitalised = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+  // English capitalises the headline when it opens the line; Thai has no case.
+  const capitalised = (text, value) => value === 'th' ? text : text.charAt(0).toUpperCase() + text.slice(1);
+  $: expiryHeadDisplay = playsHead ? expiryHead : capitalised(expiryHead, $locale);
 
   // Read before the button, not after it. A spent link says its piece in place
   // of the controls instead (see .spent), except while a TV is still connected
   // and the controls stay on screen.
   $: playsWarning = playsUsedUp
-    ? (spent ? '' : 'Every play on this link has been used.')
+    ? (spent ? '' : $t('terms.allPlaysUsed'))
     : lastPlay
-      ? (playLimit === 1 ? 'This link has a single play. ' : 'This is the last play. ') +
-        (shareInfo.allowDownload
-          ? 'Watching here or on a TV, or downloading, uses it.'
-          : 'Watching here or on a TV uses it.')
+      ? (playLimit === 1 ? $t('terms.singlePlay') : $t('terms.lastPlay')) +
+        (shareInfo.allowDownload ? $t('terms.usesItDownload') : $t('terms.usesIt'))
       : '';
 
   // Resume comes from the link's shared record, so the place may be someone
@@ -238,26 +242,25 @@
   // button that offers it, which may be the first thing a new viewer sees.
   $: resumedMidway = isSeasonOrSeries ? seriesResume?.position > 0 : movieResumeAt > 0;
   $: resumeNote = resumedMidway
-    ? 'Where anyone with this link last stopped, on any device.'
+    ? $t('terms.resumeAnyDevice')
     : isSeasonOrSeries && seriesResume?.isNext
-      ? 'Next after the last episode anyone with this link finished.'
+      ? $t('terms.resumeNextEpisode')
       : '';
 
   $: viewersLine = !viewerLimit
     ? ''
     : viewersFull
       ? (viewerLimit === 1
-          ? 'Someone is watching right now, and only one person can watch at a time. Playing may not start until they stop.'
-          : `${viewerLimit} people are watching right now, the most this link allows. Playing may not start until one of them stops.`)
-      : (viewerLimit === 1 ? 'One person can watch at a time.' : `Up to ${viewerLimit} people can watch at once.`);
+          ? $t('terms.viewersFullOne')
+          : $t('terms.viewersFullMany', { count: viewerLimit }))
+      : (viewerLimit === 1 ? $t('terms.viewersOne') : $t('terms.viewersMany', { count: viewerLimit }));
 
   // How a series spends plays, which is not obvious from "3 plays": running on
   // into the next episode, by autoplay or Play now on the card, carries the
   // play along (see continuationOf on the server); an episode the viewer picks
   // is a new one.
   $: countingNote = playLimit && isSeasonOrSeries
-    ? 'When an episode runs on into the next, or you take Play now at its end, that is still one play. Starting an episode yourself uses one.' +
-      (shareInfo.allowDownload ? ' So does each download.' : '')
+    ? $t('terms.countingNote') + (shareInfo.allowDownload ? $t('terms.countingDownload') : '')
     : '';
 
   $: tvNote = tvHint();
@@ -317,13 +320,13 @@
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
   // "in 6 days" while there is time to spare; under two days the hours count.
-  function expiryWords(expiresAt) {
+  function expiryWords(expiresAt, translate) {
     const diff = new Date(expiresAt) - Date.now();
-    if (!(diff > 0)) return 'now';
+    if (!(diff > 0)) return translate('terms.expiry.now');
     const hours = Math.floor(diff / (1000 * 60 * 60));
-    if (hours >= 48) return `in ${plural(Math.floor(hours / 24), 'day')}`;
-    if (hours >= 1) return `in ${plural(hours, 'hour')}`;
-    return `in ${plural(Math.max(1, Math.floor(diff / (1000 * 60))), 'minute')}`;
+    if (hours >= 48) return translate('terms.inDays', { count: Math.floor(hours / 24) });
+    if (hours >= 1) return translate('terms.inHours', { count: hours });
+    return translate('terms.inMinutes', { count: Math.max(1, Math.floor(diff / (1000 * 60))) });
   }
 
   // A download's size, so a tap on mobile data is a choice. Decimal units, as
@@ -344,7 +347,7 @@
   async function submitPassword() {
     if (passwordLoading) return;
     if (!passwordInput.trim()) {
-      passwordError = 'Enter the password to open this link.';
+      passwordError = $t('gate.enter');
       passwordField?.focus();
       return;
     }
@@ -361,14 +364,14 @@
       if (response.ok) {
         opened = true;
       } else if (response.status === 401) {
-        passwordError = 'That password doesn’t match. Check it with whoever shared the link.';
+        passwordError = $t('gate.wrong');
       } else if (response.status === 429) {
-        passwordError = 'Too many tries in a short time. Wait a minute, then try again.';
+        passwordError = $t('gate.tooMany');
       } else {
-        passwordError = 'The password couldn’t be checked. Try again in a moment.';
+        passwordError = $t('gate.checkFailed');
       }
     } catch (e) {
-      passwordError = OFFLINE;
+      passwordError = $t('common.offline');
     } finally {
       passwordLoading = false;
     }
@@ -1173,11 +1176,11 @@
                tap costs. The finer print follows below the controls. -->
           <div class="terms-head">
             <p class="terms-head__line" tabindex="-1" bind:this={termsHead}>
-              {#if playsHead}{playsHead} · {/if}{#if shareInfo.expiresAt}<time datetime={shareInfo.expiresAt}>{playsHead ? expiryHead : capitalised(expiryHead)}</time>{:else}{playsHead ? expiryHead : capitalised(expiryHead)}{/if}
+              {#if playsHead}{playsHead} ·{' '}{/if}{#if shareInfo.expiresAt}<time datetime={shareInfo.expiresAt}>{expiryHeadDisplay}</time>{:else}{expiryHeadDisplay}{/if}
             </p>
-            {#if expiryExact}<p class="terms-head__exact">Until {expiryExact}</p>{/if}
+            {#if expiryExact}<p class="terms-head__exact">{$t('terms.until', { date: expiryExact })}</p>{/if}
             {#if playLimit}
-              <div class="fuel__track" role="meter" aria-label="Plays left"
+              <div class="fuel__track" role="meter" aria-label={$t('terms.playsLeftLabel')}
                    aria-valuemin="0" aria-valuemax={playLimit} aria-valuenow={playsLeft}
                    aria-valuetext={playsCount}>
                 <div class="fuel__fill" class:fuel__fill--low={playsLeft <= 1}
@@ -1195,13 +1198,13 @@
                inserted with it, so on the way back from the player the page
                focuses this sentence and it is read out that way. -->
           <div class="spent" role="status">
-            <p class="spent__head" tabindex="-1" bind:this={spentNote}>{playLimit === 1 ? 'The one play on this link has been used.' : `All ${playLimit} plays on this link have been used.`}</p>
-            <p class="spent__next">Ask whoever shared it for a new link.</p>
+            <p class="spent__head" tabindex="-1" bind:this={spentNote}>{playLimit === 1 ? $t('terms.spentOne') : $t('terms.spentMany', { count: playLimit })}</p>
+            <p class="spent__next">{$t('terms.askAdmin')}</p>
           </div>
         {:else if showPasswordForm}
           <form class="gate" on:submit|preventDefault={submitPassword} novalidate>
             <div class="field">
-              <label for="share-password">Password</label>
+              <label for="share-password">{$t('gate.password')}</label>
               <div class="gate__row">
                 <input
                   id="share-password"
@@ -1219,22 +1222,22 @@
                 />
                 <button type="button" class="btn-ghost" aria-controls="share-password"
                         on:click={() => { showPassword = !showPassword; passwordField?.focus(); }}>
-                  {showPassword ? 'Hide' : 'Show'}<span class="sr-only"> password</span>
+                  {showPassword ? $t('gate.hide') : $t('gate.show')}{' '}<span class="sr-only">{$t('gate.passwordSr')}</span>
                 </button>
               </div>
               <!-- Under the field it is about, above the button: on a phone the
                    keyboard leaves room for little more than these. -->
               <p class="field__help" id="share-password-help" aria-live="polite"
                  class:field__help--error={passwordError}>
-                {passwordError || 'Whoever shared this link set a password for it.'}
+                {passwordError || $t('gate.help')}
               </p>
             </div>
             <button type="submit" class="btn-primary gate__submit" disabled={passwordLoading}>
               {#if passwordLoading}
                 <span class="meter meter--inline" aria-hidden="true"></span>
-                <span>Checking</span>
+                <span>{$t('gate.checking')}</span>
               {:else}
-                <span>Unlock</span>
+                <span>{$t('gate.unlock')}</span>
               {/if}
             </button>
           </form>
