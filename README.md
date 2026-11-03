@@ -30,6 +30,35 @@ Jellyfin UI integration to install.**
 dates and track names are available in **Thai and English, with Thai as the
 default** and an EN/TH pill.
 
+## What does it look like
+
+<table width="100%">
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/admin-create.png" alt="The Create tab in the admin dashboard" width="100%" />
+      <br />
+      <sub><strong>Create</strong> — Search the Jellyfin library, expand a series to its seasons and episodes, and set expiry, play limits, viewers, quality, password and downloads.</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/admin-shares.png" alt="The Shares tab in the admin dashboard" width="100%" />
+      <br />
+      <sub><strong>Shares</strong> — Filter by Active, Inactive or All; edit, copy, revoke, restore, duplicate or delete links one at a time or in bulk.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/admin-analytics.png" alt="The Analytics overview in the admin dashboard" width="100%" />
+      <br />
+      <sub><strong>Analytics</strong> — Totals, a 30-day views chart, and per-link views, unique viewers, watch time and plays.</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/share-thai.png" alt="The public share page in Thai" width="100%" />
+      <br />
+      <sub><strong>The share page</strong> — Thai by default, with an EN/TH pill, the link's terms, track selectors, downloads and casting.</sub>
+    </td>
+  </tr>
+</table>
+
 ## Features
 
 **What sets Jellyshare apart from its forks:**

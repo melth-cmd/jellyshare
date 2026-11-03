@@ -12,6 +12,7 @@
 - Added `docs/BRANDING.md` with the brand asset inventory and replacement steps.
 - Replaced the inherited mark with the new vortex icon set: raster favicon,
   Apple touch, 192/512/maskable icons, and a nav tile.
+- Re-added a "What does it look like" section with four rounded screenshots.
 
 2026-11-01
 
