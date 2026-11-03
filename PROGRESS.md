@@ -680,3 +680,9 @@ pass.
   `sha256:0d20250e03010ff97f86d26f55b23bafb49be756f3aa738766893a04247a5207`;
   production is healthy on `0.5.0`, and an old 24-hex token still returns 200.
   The 0.5.0 milestone is closed.
+- **v0.5.1 released and deployed** (`f9ad6d1` + tag): new vortex brand mark and
+  app icons, a rounded README logo and screenshot tour, README restructuring,
+  and upstream credits. Image digest
+  `sha256:5d569e9add75cee43ba95830a47450017502a4d863ee4745520241a9a99fedcd`;
+  production is healthy on `0.5.1`, and the new favicon, icons, nav mark and
+  manifest are served by the live container.
