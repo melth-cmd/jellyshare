@@ -691,3 +691,9 @@ pass.
   and the maskable icon are picked up reliably. Image digest
   `sha256:e46c029ef56b186712b6e4f571afb481541bf9e1b1f1f25119eddf215ff87aa6`;
   production is healthy on `0.5.2`.
+- **v0.5.3 released and deployed** (`b5476b6` + tag): the stream proxy now
+  sanitizes HLS manifests, removing Jellyfin credentials and dropping the unused
+  trickplay image stream. A Jellyfin API key that had appeared in the manifest
+  was rotated; the old key is revoked. Image digest
+  `sha256:063cf593d83b1d10bb91ab841b8bb7cd60173eef50e54786b16d46d271360779`;
+  production is healthy on `0.5.3`.
