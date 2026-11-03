@@ -135,6 +135,8 @@ The rest of the feature set:
 
 ## Recent releases
 
+- **0.5.2** - Serve the web app manifest as `application/manifest+json`, so PWA
+  installs and the new maskable icons are picked up reliably.
 - **0.5.1** - New vortex brand mark and app icons, a refreshed README with a
   screenshot tour, and upstream credits.
 - **0.5.0** - Thai localization for the public page, player and error page, with
@@ -215,7 +217,7 @@ docker compose up -d
 If you prefer to build from the checkout instead:
 
 ```bash
-docker build -t ghcr.io/melth-cmd/jellyshare:0.5.1 .
+docker build -t ghcr.io/melth-cmd/jellyshare:0.5.2 .
 docker compose up -d
 ```
 
@@ -382,7 +384,7 @@ Before exposing the service to the internet, follow
 - Phones and tablets keep their native fullscreen control, which also turns the
   picture to landscape.
 - **The public page is available in English and Thai, with Thai as the default.**
-- No database schema changes in 0.2.0–0.5.1; upgrades are image-tag changes.
+- No database schema changes in 0.2.0–0.5.2; upgrades are image-tag changes.
 
 **Interface**
 

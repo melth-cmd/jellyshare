@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,6 +23,12 @@ import (
 	"github.com/melth-cmd/jellyshare/internal/middleware"
 	"github.com/melth-cmd/jellyshare/internal/proxy"
 )
+
+func init() {
+	// Go's built-in MIME table does not know .webmanifest, so FileServer would
+	// serve the web app manifest as text/plain. Browsers expect a JSON type.
+	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
+}
 
 func main() {
 	cfg := config.Load()

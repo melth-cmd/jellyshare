@@ -7,7 +7,7 @@ version: '3.8'
 
 services:
   jellyshare:
-    image: ghcr.io/melth-cmd/jellyshare:0.5.1
+    image: ghcr.io/melth-cmd/jellyshare:0.5.2
     container_name: jellyshare
     restart: unless-stopped
     ports:
