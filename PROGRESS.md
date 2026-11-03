@@ -686,3 +686,8 @@ pass.
   `sha256:5d569e9add75cee43ba95830a47450017502a4d863ee4745520241a9a99fedcd`;
   production is healthy on `0.5.1`, and the new favicon, icons, nav mark and
   manifest are served by the live container.
+- **v0.5.2 released and deployed** (`0be9824` + tag): the web app manifest is
+  served as `application/manifest+json` instead of `text/plain`, so PWA installs
+  and the maskable icon are picked up reliably. Image digest
+  `sha256:e46c029ef56b186712b6e4f571afb481541bf9e1b1f1f25119eddf215ff87aa6`;
+  production is healthy on `0.5.2`.
