@@ -10,6 +10,8 @@
   with no plugin, and Thai share links. Security and notable changes moved
   before Operations.
 - Added `docs/BRANDING.md` with the brand asset inventory and replacement steps.
+- Replaced the inherited mark with the new vortex icon set: raster favicon,
+  Apple touch, 192/512/maskable icons, and a nav tile.
 
 2026-11-01
 
