@@ -2,6 +2,15 @@
 
 ## Current status
 
+2026-11-03
+
+- Public repo and GHCR package; history rewritten to drop the pre-public
+  screenshots, private IPs/paths and the personal author email.
+- README now leads with the two differentiators: one central admin dashboard
+  with no plugin, and Thai share links. Security and notable changes moved
+  before Operations.
+- Added `docs/BRANDING.md` with the brand asset inventory and replacement steps.
+
 2026-11-01
 
 - Repo detached from upstream: fresh single-commit history, private

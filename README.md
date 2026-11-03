@@ -2,7 +2,8 @@
 
 <p align="center">
   Temporary, limited links to a film, an episode, a season or a whole series on
-  your Jellyfin server; great for sharing with family and friends.
+  your Jellyfin server; <strong>created and managed from one central admin
+  dashboard, with no plugin</strong>, and <strong>shared in Thai or English</strong>.
 </p>
 
 > **A note on AI:** Jellyshare is developed by a human with AI assistance
@@ -16,9 +17,27 @@ them your Jellyfin server. The link carries its own terms: how long it lasts,
 how often it can be played, how many people may watch at once, and an optional
 password.
 
-The public page is available in English and Thai, with Thai as the default.
+**Everything is created and managed from one central admin dashboard** — search
+the library, build a link, set its terms, then edit, revoke, restore, duplicate
+or analyse it later. **There is no Jellyfin plugin, no companion app, and no
+Jellyfin UI integration to install.**
+
+**The shared link itself is bilingual.** The public page, player, error page,
+dates and track names are available in **Thai and English, with Thai as the
+default** and an EN/TH pill.
 
 ## Features
+
+**What sets Jellyshare apart from its forks:**
+
+- **One central admin dashboard, no plugin.** **Create, edit, revoke, restore,
+  duplicate and analyse every link in one place.** There is **no Jellyfin
+  plugin, no companion app, and no Jellyfin UI integration** to install.
+- **Thai share links, not just a Thai admin.** **The public link, player, error
+  page, dates and track names are fully Thai**, with Thai as the default and an
+  EN/TH pill.
+
+The rest of the feature set:
 
 - **Temporary Share Links** - Create time-limited links that automatically expire
 - **Readable Links** - New links use a readable slug plus a random suffix, e.g.
@@ -35,10 +54,11 @@ The public page is available in English and Thai, with Thai as the default.
   revoked or expired, and since when
 - **Secure Streaming** - Media is proxied through the backend; Jellyfin is never exposed
 - **Rich Metadata** - Displays poster, backdrop, ratings, cast, and more
-- **Admin Dashboard** - Create links, browse the Jellyfin library as a series →
-  season → episode tree, filter shares, edit terms, and revoke, restore,
-  duplicate or delete links one at a time or in bulk. The picker remembers the
-  last chosen item and the last eight shared items
+- **Admin Dashboard** - **The only place links are created and managed.** Create
+  links, browse the Jellyfin library as a series → season → episode tree, filter
+  shares, edit terms, and revoke, restore, duplicate or delete links one at a
+  time or in bulk. The picker remembers the last chosen item and the last eight
+  shared items. **No plugin is involved**
 - **Analytics** - An Analytics tab with Overview and Links sub-tabs: totals, a
   30-day views chart, and per-link views, unique viewers, average watch time and
   plays
@@ -68,10 +88,10 @@ The public page is available in English and Thai, with Thai as the default.
   something plays on a TV the page says so and keeps track of where it is
 - **Per-Share Quality** - Cap a single link at 1080p, 720p or 480p without touching
   the library or the server settings
-- **Thai and English** - The public page, player and error page are available in
-  Thai and English, with Thai as the default and an EN/TH pill. Dates use Thai
-  month names with the Gregorian calendar, and track language names follow the
-  page language
+- **Thai and English** - **The shared link, not just the admin UI.** The public
+  page, player and error page are available in Thai and English, with Thai as
+  the default and an EN/TH pill. Dates use Thai month names with the Gregorian
+  calendar, and track language names follow the page language
 - **Designed Interface** - The share page leads with the artwork Jellyfin already
   holds and states the link's terms in plain language; the admin surface is a
   single scannable index. Both follow one locked design system
@@ -107,6 +127,9 @@ full notes.
                     │  PostgreSQL │
                     └─────────────┘
 ```
+
+**The admin dashboard is the control plane: links are created and managed there,
+not in Jellyfin. The viewer only ever sees the public share page.**
 
 ## Quick Start
 
@@ -167,6 +190,9 @@ The server will be available at `http://localhost:8097`
 
 Navigate to `http://localhost:8097/admin` and enter your `BACKEND_API_KEY`.
 
+**All link creation and management happens here. There is no Jellyfin plugin to
+install.**
+
 The dashboard has three tabs:
 
 - **Create** — search for a film or series, expand a series to its seasons and
@@ -208,21 +234,6 @@ Before exposing the service to the internet, follow
 | `JELLYSHARE_ALLOW_DOWNLOADS` | Offer downloads of the original file, and of a season or series as one ZIP. Each download counts as one play | `true` |
 | `JELLYSHARE_SHARE_RETENTION_DAYS` | Days after a link expired or was revoked before its row is deleted. Live and never-expiring links are never deleted. `0` keeps stale rows forever | `365` |
 
-## Operations
-
-Backups, the nightly timer, restore, upgrades and rollback are in
-[`docs/OPERATIONS.md`](docs/OPERATIONS.md).
-
-## API Reference
-
-The admin and public endpoints, request shapes and response fields are in
-[`docs/API.md`](docs/API.md).
-
-## Development
-
-The dev stack, checks, local demo, project structure and build commands are in
-[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
-
 ## Security Considerations
 
 - **Jellyfin is never exposed** - All media requests are proxied through the backend
@@ -255,6 +266,15 @@ The dev stack, checks, local demo, project structure and build commands are in
   from a request, so a share link cannot be pointed at another item
 
 ## Notable changes
+
+**What sets it apart**
+
+- **One central admin dashboard, no plugin.** Every link is created, edited,
+  revoked, restored, duplicated and analysed in the admin page. There is no
+  Jellyfin plugin, no companion app, and no Jellyfin UI integration to install.
+- **Thai share links, not just a Thai admin.** The public page, player, error
+  page, dates and track names are Thai, with Thai as the default and an EN/TH
+  pill.
 
 **Security**
 
@@ -326,7 +346,7 @@ The dev stack, checks, local demo, project structure and build commands are in
   playback without casting.
 - Phones and tablets keep their native fullscreen control, which also turns the
   picture to landscape.
-- The public page is available in English and Thai, with Thai as the default.
+- **The public page is available in English and Thai, with Thai as the default.**
 - No database schema changes in 0.2.0–0.5.0; upgrades are image-tag changes.
 
 **Interface**
@@ -347,12 +367,28 @@ The dev stack, checks, local demo, project structure and build commands are in
   row's description.
 - The admin dashboard is an index rather than a table: it restacks on a phone,
   revoking asks in the row it affects, and the picker remembers recent items.
-- The admin has Create, Shares and Analytics tabs; Analytics has Overview and
-  Links sub-tabs with totals, a 30-day chart and per-link usage.
+- **The admin has Create, Shares and Analytics tabs**; Analytics has Overview
+  and Links sub-tabs with totals, a 30-day chart and per-link usage.
 - New links use a readable slug plus a random suffix; older random-token links
   keep working.
-- The public page has an EN/TH pill, Thai dates with the Gregorian calendar, and
-  Thai track language names.
+- **The public page has an EN/TH pill**, Thai dates with the Gregorian calendar,
+  and Thai track language names.
+
+## Operations
+
+Backups, the nightly timer, restore, upgrades and rollback are in
+[`docs/OPERATIONS.md`](docs/OPERATIONS.md).
+
+## API Reference
+
+The admin and public endpoints, request shapes and response fields are in
+[`docs/API.md`](docs/API.md).
+
+## Development
+
+The dev stack, checks, local demo, project structure and build commands are in
+[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md). Brand assets and how to replace
+them are in [`docs/BRANDING.md`](docs/BRANDING.md).
 
 ## Credits
 
