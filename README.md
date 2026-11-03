@@ -1,6 +1,10 @@
 <h1 align="center">Jellyshare</h1>
 
 <p align="center">
+  <img src="docs/logo.png" alt="Jellyshare" width="128" height="128" />
+</p>
+
+<p align="center">
   Temporary, limited links to a film, an episode, a season or a whole series on
   your Jellyfin server; <strong>created and managed from one central admin
   dashboard, with no plugin</strong>, and <strong>shared in Thai or English</strong>.

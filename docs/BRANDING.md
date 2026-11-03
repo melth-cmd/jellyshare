@@ -15,11 +15,14 @@ PNG rather than an inline SVG.
 | `web/public/brand/icon-maskable-512.png` | 512×512, maskable | `web/public/brand/manifest.webmanifest` |
 | `web/public/brand/mark-128.png` | 128×128 | `web/src/components/BrandMark.svelte` |
 | `web/public/brand/manifest.webmanifest` | JSON | `web/index.html` |
+| `docs/logo.png` | 256×256, rounded corners | `README.md` |
 
 The favicon and the nav tile are 900×900 centre crops, so the vortex fills more
 of the small frame; 900 is the tightest crop that keeps the whole vortex. The
 192 and 512 icons use the full square composition. The maskable icon is also the
 full square because the vortex already sits inside the 80% safe zone.
+`docs/logo.png` is a 256×256 rounded-corner copy for the README only; it is not
+served by the app.
 
 ## Where the nav mark is drawn
 
@@ -85,3 +88,4 @@ raster set from it with ImageMagick if the artwork changes.
 - [ ] `theme-color` and manifest colours match the new artwork.
 - [ ] Frontend build passes.
 - [ ] Tab, admin, share, error and PWA icons checked.
+- [ ] `docs/logo.png` regenerated if the mark changes.
