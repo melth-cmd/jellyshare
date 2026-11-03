@@ -235,6 +235,9 @@ func (p *StreamProxy) proxyRequest(w http.ResponseWriter, r *http.Request, targe
 	req.Header.Set("Authorization", p.jf.AuthHeader())
 
 	req.Header.Set("Authorization", p.jf.AuthHeader())
+	// Manifests are rewritten below; keep them uncompressed so the body can be
+	// inspected and sanitized.
+	req.Header.Set("Accept-Encoding", "identity")
 
 	// Copy relevant headers
 	if rangeHeader := r.Header.Get("Range"); rangeHeader != "" {
@@ -254,8 +257,8 @@ func (p *StreamProxy) proxyRequest(w http.ResponseWriter, r *http.Request, targe
 
 	// Copy response headers
 	for key, values := range resp.Header {
-		// Skip hop-by-hop headers
-		if isHopByHopHeader(key) {
+		// Skip hop-by-hop headers and upstream server identity.
+		if isHopByHopHeader(key) || strings.EqualFold(key, "Server") || strings.EqualFold(key, "X-Powered-By") {
 			continue
 		}
 		for _, value := range values {
@@ -267,10 +270,87 @@ func (p *StreamProxy) proxyRequest(w http.ResponseWriter, r *http.Request, targe
 	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
+	// HLS manifests can carry Jellyfin credentials in their URLs. Rewrite the
+	// body before it reaches the viewer; segments are streamed untouched.
+	if isManifestResponse(r, resp) {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("Failed to read HLS manifest: %v", err)
+			http.Error(w, "proxy error", http.StatusBadGateway)
+			return
+		}
+		body = sanitizeManifest(body)
+		w.Header().Del("Content-Length")
+		w.Header().Del("Content-Encoding")
+		w.Header().Set("Content-Length", strconv.Itoa(len(body)))
+		w.WriteHeader(resp.StatusCode)
+		if _, err := w.Write(body); err != nil {
+			log.Printf("Failed to write HLS manifest: %v", err)
+		}
+		return
+	}
+
 	w.WriteHeader(resp.StatusCode)
 
 	// Stream the response
 	io.Copy(w, resp.Body)
+}
+
+func isManifestResponse(r *http.Request, resp *http.Response) bool {
+	if strings.Contains(strings.ToLower(resp.Header.Get("Content-Type")), "mpegurl") {
+		return true
+	}
+	return strings.HasSuffix(strings.ToLower(r.URL.Path), ".m3u8")
+}
+
+// sensitiveManifestParams are query parameters Jellyfin may put in a manifest
+// URL. ApiKey is a server credential; the others are aliases or auth headers
+// that have appeared in manifests. None of them may reach the viewer.
+var sensitiveManifestParams = []string{
+	"ApiKey", "apiKey", "apikey", "api_key", "X-Emby-Token", "Authorization",
+}
+
+// sanitizeManifest removes Jellyfin credentials from an HLS manifest. Jellyfin
+// writes its API key into the trickplay image stream URI, so that line is
+// dropped entirely; the player does not use trickplay. Any credentials left in
+// other URIs are removed as a second line of defence.
+func sanitizeManifest(body []byte) []byte {
+	lines := strings.Split(string(body), "\n")
+	out := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if strings.HasPrefix(line, "#EXT-X-IMAGE-STREAM-INF:") {
+			continue
+		}
+		out = append(out, stripManifestURLCredentials(line))
+	}
+	return []byte(strings.Join(out, "\n"))
+}
+
+func stripManifestURLCredentials(line string) string {
+	if i := strings.Index(line, `URI="`); i >= 0 {
+		start := i + len(`URI="`)
+		if end := strings.Index(line[start:], `"`); end >= 0 {
+			uri := line[start : start+end]
+			line = line[:start] + stripURLCredentials(uri) + line[start+end:]
+		}
+	}
+	if !strings.HasPrefix(line, "#") {
+		line = stripURLCredentials(line)
+	}
+	return line
+}
+
+func stripURLCredentials(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return raw
+	}
+	q := u.Query()
+	for _, key := range sensitiveManifestParams {
+		q.Del(key)
+	}
+	u.RawQuery = q.Encode()
+	return u.String()
 }
 
 func isHopByHopHeader(header string) bool {

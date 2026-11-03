@@ -135,6 +135,8 @@ The rest of the feature set:
 
 ## Recent releases
 
+- **0.5.3** - Strip Jellyfin credentials from HLS manifests and drop the unused
+  trickplay image stream.
 - **0.5.2** - Serve the web app manifest as `application/manifest+json`, so PWA
   installs and the new maskable icons are picked up reliably.
 - **0.5.1** - New vortex brand mark and app icons, a refreshed README with a
@@ -217,7 +219,7 @@ docker compose up -d
 If you prefer to build from the checkout instead:
 
 ```bash
-docker build -t ghcr.io/melth-cmd/jellyshare:0.5.2 .
+docker build -t ghcr.io/melth-cmd/jellyshare:0.5.3 .
 docker compose up -d
 ```
 
@@ -293,7 +295,9 @@ Before exposing the service to the internet, follow
   tokens, session ids and download tickets are masked in request logs, and all
   responses carry `nosniff`, `SAMEORIGIN`, `no-referrer`, and `noindex` headers
 - **Credentials stay server-side** - The Jellyfin key travels as a request header, never
-  in a URL that could be echoed back into a manifest the viewer receives
+  in a URL that could be echoed back into a manifest the viewer receives. HLS
+  manifests are rewritten before they leave the backend, and the unused trickplay
+  image stream is dropped
 - **Downloads are ticketed** - The item a download serves is checked against the share
   when it is requested and carried in an HMAC-signed ticket that expires after two
   hours; the file request cannot be pointed anywhere else, and the ticket is masked
@@ -384,7 +388,7 @@ Before exposing the service to the internet, follow
 - Phones and tablets keep their native fullscreen control, which also turns the
   picture to landscape.
 - **The public page is available in English and Thai, with Thai as the default.**
-- No database schema changes in 0.2.0–0.5.2; upgrades are image-tag changes.
+- No database schema changes in 0.2.0–0.5.3; upgrades are image-tag changes.
 
 **Interface**
 
