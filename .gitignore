@@ -42,3 +42,6 @@ web/.preview/
 
 # Local database dumps
 /.backups/
+
+# Local security sweep notes (not part of the public repo)
+securitycheck.md
