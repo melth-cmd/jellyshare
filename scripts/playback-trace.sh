@@ -88,6 +88,7 @@ IFS='|' read -r _ started heartbeat finished reason item_id media_source_id \
   title item_type share_max_height share_max_bitrate allow_download expires revoked <<<"$row"
 
 START_UTC="$started"
+END_UTC="$finished"
 printf '%-22s %s\n' "started" "$started"
 printf '%-22s %s\n' "last heartbeat" "${heartbeat:-—}"
 printf '%-22s %s\n' "finished" "${finished:-still active}"
@@ -227,9 +228,15 @@ fi
 section "ffmpeg jobs"
 jobs_file="$(mktemp)"
 trap 'rm -f "$jobs_file"' EXIT
-docker exec "$JELLYFIN_CONTAINER" sh -c '
-  TZ=UTC find /config/log -maxdepth 1 -name "FFmpeg.*_$1_*.log" -newermt "$2" -printf "%T@ %f\n" 2>/dev/null | sort -n
-' sh "$media_source_id" "$START_UTC" >"$jobs_file" || true
+if [ -n "$END_UTC" ]; then
+  docker exec "$JELLYFIN_CONTAINER" sh -c '
+    TZ=UTC find /config/log -maxdepth 1 -name "FFmpeg.*_$1_*.log" -newermt "$2" ! -newermt "$3" -printf "%T@ %f\n" 2>/dev/null | sort -n
+  ' sh "$media_source_id" "$START_UTC" "$END_UTC" >"$jobs_file" || true
+else
+  docker exec "$JELLYFIN_CONTAINER" sh -c '
+    TZ=UTC find /config/log -maxdepth 1 -name "FFmpeg.*_$1_*.log" -newermt "$2" -printf "%T@ %f\n" 2>/dev/null | sort -n
+  ' sh "$media_source_id" "$START_UTC" >"$jobs_file" || true
+fi
 
 job_count="$(wc -l <"$jobs_file" | tr -d ' ')"
 echo "count since session start: $job_count"

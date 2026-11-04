@@ -6,6 +6,7 @@
   // pays nothing for it: no interval, no listeners, no DOM.
   export let getVideo = () => null;
   export let getHls = () => null;
+  export let getInitPTS = () => null;
   export let mode = 'hls';
   export let startPosition = 0;
   export let sessionId = '';
@@ -53,6 +54,10 @@
     return null;
   }
 
+  function isAudioId(id) {
+    return typeof id === 'string' && id.toLowerCase().includes('audio');
+  }
+
   function activeCue(v) {
     const tracks = v.textTracks;
     if (!tracks) return null;
@@ -91,6 +96,20 @@
     // first fragment up with its playlist position, so every cue authored on
     // the source clock lands this far off. Subtracting it is the correction.
     const offset = first && Number.isFinite(first.startPTS) ? round(first.startPTS - first.start) : null;
+    // hls.js re-bases the media timeline on the first timestamp it parses, so
+    // every fragment PTS above is already relative and reads ~0. The raw
+    // timestamp it started from is the only way to see a server-side offset.
+    const init = getInitPTS() || {};
+    const entries = Object.entries(init)
+      .map(([id, e]) => ({ ...e, id }))
+      .filter((e) => e && Number.isFinite(e.seconds));
+    const videoEntry = entries.find((e) => e && !isAudioId(e.id)) || entries[0] || null;
+    const audioEntry = entries.find((e) => e && isAudioId(e.id)) || null;
+    const offsetOf = (e) => (e && Number.isFinite(e.fragStart) ? round(e.seconds - e.fragStart) : null);
+    const mediaPTS = videoEntry ? round(videoEntry.seconds) : null;
+    const mediaOffset = offsetOf(videoEntry);
+    const audioOffset = offsetOf(audioEntry);
+    const avOffset = mediaOffset !== null && audioOffset !== null ? round(audioOffset - mediaOffset) : null;
     const quality = v.getVideoPlaybackQuality?.();
 
     snapshot = {
@@ -120,7 +139,12 @@
         deltaPTS: round(current.deltaPTS)
       } : null,
       hlsOffset: offset,
-      predictedCorrection: offset === null ? null : round(-offset),
+      mediaPTS,
+      mediaOffset,
+      audioOffset,
+      avOffset,
+      predictedCorrection: mediaOffset !== null ? round(-mediaOffset)
+        : offset === null ? null : round(-offset),
       cue: activeCue(v),
       waiting: waits,
       stalled: stalls
@@ -246,9 +270,19 @@
           —
         {/if}
       </dd>
-      <dt>hls offset</dt>
-      <dd class:debug__warn={Math.abs(snapshot.hlsOffset || 0) > 0.25}>
-        {snapshot.hlsOffset ?? '—'}
+      <dt>frag drift (rel.)</dt>
+      <dd>{snapshot.hlsOffset ?? '—'}</dd>
+      <dt>media PTS offset</dt>
+      <dd class:debug__warn={Math.abs(snapshot.mediaOffset || 0) > 0.25}>
+        {snapshot.mediaOffset ?? '—'}
+      </dd>
+      <dt>audio PTS offset</dt>
+      <dd class:debug__warn={Math.abs(snapshot.audioOffset || 0) > 0.25}>
+        {snapshot.audioOffset ?? '—'}
+      </dd>
+      <dt>A/V start offset</dt>
+      <dd class:debug__warn={Math.abs(snapshot.avOffset || 0) > 0.25}>
+        {snapshot.avOffset ?? '—'}
       </dd>
       <dt>predicted correction</dt>
       <dd class:debug__warn={Math.abs(snapshot.predictedCorrection || 0) > 0.25}>

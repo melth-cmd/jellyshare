@@ -47,6 +47,10 @@
   // Which playback path is running; the overlay says so, since the same file
   // behaves differently under hls.js and a browser's native HLS.
   let playerMode = 'hls';
+  // The first raw media timestamp hls.js saw, before it re-based the timeline
+  // to 0. This is the only client-side number that reveals a server-side PTS
+  // offset: everything else on the overlay is relative to it.
+  let initPTS = {};
 
   // The card offering the next episode appears this long before the end.
   const NEXT_UP_SECONDS = 30;
@@ -255,6 +259,17 @@
         // segments, which would fetch and throw away the opening of the file.
         startPosition: startPosition > 0 ? startPosition : -1
       });
+
+      if (debugEnabled) {
+        hls.on(Hls.Events.INIT_PTS_FOUND, (event, data) => {
+          const seconds = Number(data.initPTS) / Number(data.timescale);
+          if (!Number.isFinite(seconds)) return;
+          initPTS = {
+            ...initPTS,
+            [data.id]: { seconds, fragStart: data.frag?.start ?? null }
+          };
+        });
+      }
 
       hls.loadSource(playbackData.playbackUrl);
       hls.attachMedia(videoElement);
@@ -625,7 +640,8 @@
 
   {#if debugEnabled}
     <PlayerDebug {sessionId} {startPosition} mode={playerMode}
-                 getVideo={() => videoElement} getHls={() => hls} />
+                 getVideo={() => videoElement} getHls={() => hls}
+                 getInitPTS={() => initPTS} />
   {/if}
 </div>
 
