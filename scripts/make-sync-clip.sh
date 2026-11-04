@@ -53,8 +53,12 @@ if [ -d "$LIBRARY" ] && [ "$FORCE" -eq 0 ]; then
   echo "error: $LIBRARY already exists; pass --force to regenerate" >&2
   exit 1
 fi
-rm -rf "$LIBRARY" "$WORK"
 mkdir -p "$LIBRARY" "$WORK"
+# Clear the contents rather than the directory itself: a bind mount into a
+# container pins the inode, so replacing the directory leaves the mount
+# pointing at a deleted one.
+find "$LIBRARY" -mindepth 1 -delete
+find "$WORK" -mindepth 1 -delete
 
 # Escape a path for ffmpeg's filtergraph parser.
 filter_path() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/:/\\:/g' -e "s/'/\\\\'/g"; }
@@ -137,8 +141,8 @@ write_srt "$LIBRARY/Sync Offset Plus 10 (2026)/Sync Offset Plus 10 (2026).en.srt
 
 # A negative presentation start cannot be stored in MP4, so the "subtitles run
 # early" direction is produced on the subtitle side instead.
-publish "Sync Subs Early 2 (2026)" "24 fps, subtitle cues 2s early" "$WORK/base-24000.mp4"
-write_srt "$LIBRARY/Sync Subs Early 2 (2026)/Sync Subs Early 2 (2026).en.srt" "$DURATION" 1 -2
+publish "Sync Early Cues (2026)" "24 fps, subtitle cues 2s early" "$WORK/base-24000.mp4"
+write_srt "$LIBRARY/Sync Early Cues (2026)/Sync Early Cues (2026).en.srt" "$DURATION" 1 -2
 
 # Video is 23.976 fps but the subtitles are timed for a 25 fps cut, so they run
 # early by 25/23.976 and the error grows ~2.5s per minute.
