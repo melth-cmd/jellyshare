@@ -1,4 +1,4 @@
-.PHONY: help demo-up demo-down demo-reset dev dev-up dev-down dev-logs dev-shell dev-db-sync backup-db restore-db prod prod-up prod-down prod-logs build clean test
+.PHONY: help demo-up demo-down demo-reset dev dev-up dev-down dev-logs dev-shell dev-db-sync backup-db restore-db sync-clips prod prod-up prod-down prod-logs build clean test
 
 # Default target
 help:
@@ -18,6 +18,7 @@ help:
 	@echo "  make dev-db-sync - Copy production data into the dev database"
 	@echo "  make backup-db   - Dump production into .backups (keep 5)"
 	@echo "  make restore-db FILE=... [TARGET=...] - Restore a dump (default: dev)"
+	@echo "  make sync-clips  - Generate subtitle-sync test clips in .sync-clips"
 	@echo ""
 	@echo "Production:"
 	@echo "  make prod-up     - Build and start production"
@@ -71,6 +72,9 @@ backup-db:
 restore-db:
 	@test -n "$(FILE)" || (echo "usage: make restore-db FILE=.backups/jellyshare-....sql.gz [TARGET=jellyshare-db-dev]" && exit 1)
 	scripts/restore-db.sh "$(FILE)" $(TARGET)
+
+sync-clips:
+	scripts/make-sync-clip.sh
 
 dev-shell:
 	docker-compose -f docker-compose.dev.yml exec dev bash
