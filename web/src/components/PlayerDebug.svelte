@@ -17,6 +17,7 @@
   let stalls = 0;
   let waits = 0;
   let hidden = false;
+  let expanded = false;
 
   let ticker = null;
   let video = null;
@@ -233,61 +234,36 @@
     <header class="debug__head">
       <strong>sync debug</strong>
       <span class="debug__mode">{snapshot.mode}</span>
+      <button class="debug__toggle" on:click={() => (expanded = !expanded)}>
+        {expanded ? 'less' : 'more'}
+      </button>
       <button class="debug__x" on:click={hide} title="Hide" aria-label="Hide diagnostics">×</button>
     </header>
 
     <dl class="debug__grid">
-      <dt>time / duration</dt>
+      <dt>time</dt>
       <dd>{snapshot.currentTime} / {snapshot.duration}</dd>
-      <dt>start position</dt>
-      <dd>{snapshot.startPosition}</dd>
-      <dt>ready / paused</dt>
-      <dd>{snapshot.readyState} / {snapshot.paused ? 'yes' : 'no'}</dd>
-      <dt>buffer ahead</dt>
-      <dd>{snapshot.bufferAhead ?? '—'}s</dd>
-      <dt>video</dt>
-      <dd>{snapshot.resolution || '—'}</dd>
-      <dt>dropped / total</dt>
-      <dd>{snapshot.droppedFrames ?? '—'} / {snapshot.totalFrames ?? '—'}</dd>
-      <dt>waiting / stalled</dt>
-      <dd>{snapshot.waiting} / {snapshot.stalled}</dd>
-      <dt>level</dt>
-      <dd>{snapshot.level ?? '—'}</dd>
-      <dt>first frag</dt>
-      <dd>
-        {#if snapshot.firstFragment}
-          start={snapshot.firstFragment.start} startPTS={snapshot.firstFragment.startPTS}
-        {:else}
-          —
-        {/if}
-      </dd>
-      <dt>frag at time</dt>
-      <dd>
-        {#if snapshot.currentFragment}
-          start={snapshot.currentFragment.start} startPTS={snapshot.currentFragment.startPTS}
-          Δ={snapshot.currentFragment.deltaPTS}
-        {:else}
-          —
-        {/if}
-      </dd>
-      <dt>frag drift (rel.)</dt>
-      <dd>{snapshot.hlsOffset ?? '—'}</dd>
-      <dt>media PTS offset</dt>
+
+      <dt>media PTS</dt>
       <dd class:debug__warn={Math.abs(snapshot.mediaOffset || 0) > 0.25}>
         {snapshot.mediaOffset ?? '—'}
       </dd>
-      <dt>audio PTS offset</dt>
+
+      <dt>audio PTS</dt>
       <dd class:debug__warn={Math.abs(snapshot.audioOffset || 0) > 0.25}>
         {snapshot.audioOffset ?? '—'}
       </dd>
-      <dt>A/V start offset</dt>
+
+      <dt>A/V start</dt>
       <dd class:debug__warn={Math.abs(snapshot.avOffset || 0) > 0.25}>
         {snapshot.avOffset ?? '—'}
       </dd>
-      <dt>predicted correction</dt>
+
+      <dt>predicted</dt>
       <dd class:debug__warn={Math.abs(snapshot.predictedCorrection || 0) > 0.25}>
         {snapshot.predictedCorrection ?? '—'}s
       </dd>
+
       <dt>cue</dt>
       <dd>
         {#if snapshot.cue?.start != null}
@@ -298,8 +274,45 @@
           none
         {/if}
       </dd>
-      <dt>visibility</dt>
-      <dd>{snapshot.hidden ? 'hidden' : 'visible'}</dd>
+
+      <dt>wait / stall</dt>
+      <dd>{snapshot.waiting} / {snapshot.stalled}</dd>
+
+      {#if expanded}
+        <dt>start position</dt>
+        <dd>{snapshot.startPosition}</dd>
+        <dt>ready / paused</dt>
+        <dd>{snapshot.readyState} / {snapshot.paused ? 'yes' : 'no'}</dd>
+        <dt>buffer ahead</dt>
+        <dd>{snapshot.bufferAhead ?? '—'}s</dd>
+        <dt>video</dt>
+        <dd>{snapshot.resolution || '—'}</dd>
+        <dt>dropped / total</dt>
+        <dd>{snapshot.droppedFrames ?? '—'} / {snapshot.totalFrames ?? '—'}</dd>
+        <dt>level</dt>
+        <dd>{snapshot.level ?? '—'}</dd>
+        <dt>first frag</dt>
+        <dd>
+          {#if snapshot.firstFragment}
+            start={snapshot.firstFragment.start} startPTS={snapshot.firstFragment.startPTS}
+          {:else}
+            —
+          {/if}
+        </dd>
+        <dt>frag at time</dt>
+        <dd>
+          {#if snapshot.currentFragment}
+            start={snapshot.currentFragment.start} startPTS={snapshot.currentFragment.startPTS}
+            Δ={snapshot.currentFragment.deltaPTS}
+          {:else}
+            —
+          {/if}
+        </dd>
+        <dt>frag drift (rel.)</dt>
+        <dd>{snapshot.hlsOffset ?? '—'}</dd>
+        <dt>visibility</dt>
+        <dd>{snapshot.hidden ? 'hidden' : 'visible'}</dd>
+      {/if}
     </dl>
 
     <footer class="debug__foot">
@@ -310,20 +323,25 @@
 {/if}
 
 <style>
+  /* A bottom sheet, not a floating card: on a phone in portrait the video is a
+     band across the middle and everything below it is empty, so the numbers
+     stay readable without covering the picture. Collapsed by default and
+     capped in height so it never eats the frame. */
   .debug {
     position: absolute;
-    top: var(--space-md);
-    right: var(--space-md);
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: var(--z-dropdown);
-    width: min(34rem, calc(100% - 2 * var(--space-md)));
-    padding: var(--space-sm) var(--space-md);
-    background: color-mix(in oklch, var(--color-paper) 92%, transparent);
-    border: var(--rule-hair) solid var(--color-rule);
-    border-radius: var(--radius-card);
+    max-height: 46dvh;
+    overflow-y: auto;
+    padding: 0.4rem 0.65rem calc(0.4rem + env(safe-area-inset-bottom));
+    background: color-mix(in oklch, var(--color-paper) 94%, transparent);
+    border-top: var(--rule-hair) solid var(--color-rule);
     backdrop-filter: blur(12px);
     font-family: var(--font-outlier);
-    font-size: var(--text-xs);
-    line-height: 1.45;
+    font-size: 0.6875rem;
+    line-height: 1.35;
     color: var(--color-ink-2);
     text-align: left;
   }
@@ -331,32 +349,44 @@
   .debug__head {
     display: flex;
     align-items: center;
-    gap: var(--space-xs);
-    margin-bottom: var(--space-2xs);
+    gap: var(--space-2xs);
+    margin-bottom: 0.15rem;
+    font-size: 0.6875rem;
   }
 
   .debug__head strong { color: var(--color-ink); }
 
   .debug__mode {
-    padding-inline: var(--space-2xs);
+    padding-inline: 0.3rem;
     border: var(--rule-hair) solid var(--color-rule);
     border-radius: var(--radius-pill);
   }
 
-  .debug__x {
+  .debug__toggle {
     margin-left: auto;
+    padding: 0.1rem 0.45rem;
+    background: none;
+    border: var(--rule-hair) solid var(--color-rule);
+    border-radius: var(--radius-pill);
+    color: var(--color-accent);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .debug__x {
     background: none;
     border: none;
+    padding: 0 0.25rem;
     color: var(--color-muted);
-    font-size: var(--text-md);
+    font-size: 1rem;
     line-height: 1;
     cursor: pointer;
   }
 
   .debug__grid {
     display: grid;
-    grid-template-columns: 11rem 1fr;
-    gap: 0 var(--space-sm);
+    grid-template-columns: minmax(5.25rem, 7.5rem) 1fr;
+    gap: 0 var(--space-xs);
     margin: 0;
     font-variant-numeric: tabular-nums;
   }
@@ -368,9 +398,9 @@
 
   .debug__foot {
     display: flex;
-    gap: var(--space-sm);
-    margin-top: var(--space-xs);
-    padding-top: var(--space-xs);
+    gap: var(--space-md);
+    margin-top: 0.2rem;
+    padding-top: 0.2rem;
     border-top: var(--rule-hair) solid var(--color-rule);
   }
 
