@@ -16,6 +16,12 @@
   let snapshot = {};
   let stalls = 0;
   let waits = 0;
+  // How long the picture was frozen while the clock kept running. This is the
+  // number that matters: subtitles follow the clock, so a stall of N seconds
+  // shows them N seconds ahead of the picture until it catches up.
+  let stallStartedAt = 0;
+  let lastStall = 0;
+  let totalStall = 0;
   let hidden = false;
   let expanded = false;
 
@@ -148,7 +154,9 @@
         : offset === null ? null : round(-offset),
       cue: activeCue(v),
       waiting: waits,
-      stalled: stalls
+      stalled: stalls,
+      lastStall: round(lastStall, 2),
+      totalStall: round(totalStall, 2)
     };
   }
 
@@ -165,13 +173,26 @@
         sample('seeked');
       }, 400);
     };
-    const onWaiting = () => { waits++; sample('waiting'); };
+    const onWaiting = () => {
+      waits++;
+      if (!stallStartedAt) stallStartedAt = performance.now();
+      sample('waiting');
+    };
+    const onPlaying = () => {
+      if (stallStartedAt) {
+        lastStall = (performance.now() - stallStartedAt) / 1000;
+        totalStall += lastStall;
+        stallStartedAt = 0;
+      }
+      sample('playing');
+    };
     const onStalled = () => { stalls++; sample('stalled'); };
     const onLoaded = () => sample('loadedmetadata');
     const onSeeking = () => sample('seeking');
 
     video.addEventListener('seeked', onSeeked);
     video.addEventListener('waiting', onWaiting);
+    video.addEventListener('playing', onPlaying);
     video.addEventListener('stalled', onStalled);
     video.addEventListener('loadedmetadata', onLoaded);
     video.addEventListener('seeking', onSeeking);
@@ -180,6 +201,7 @@
       clearTimeout(seekTimer);
       video?.removeEventListener('seeked', onSeeked);
       video?.removeEventListener('waiting', onWaiting);
+      video?.removeEventListener('playing', onPlaying);
       video?.removeEventListener('stalled', onStalled);
       video?.removeEventListener('loadedmetadata', onLoaded);
       video?.removeEventListener('seeking', onSeeking);
@@ -244,24 +266,14 @@
       <dt>time</dt>
       <dd>{snapshot.currentTime} / {snapshot.duration}</dd>
 
-      <dt>media PTS</dt>
-      <dd class:debug__warn={Math.abs(snapshot.mediaOffset || 0) > 0.25}>
-        {snapshot.mediaOffset ?? '—'}
+      <dt>stall last</dt>
+      <dd class:debug__warn={(snapshot.lastStall || 0) > 0.25}>
+        {snapshot.lastStall ?? 0}s
       </dd>
 
-      <dt>audio PTS</dt>
-      <dd class:debug__warn={Math.abs(snapshot.audioOffset || 0) > 0.25}>
-        {snapshot.audioOffset ?? '—'}
-      </dd>
-
-      <dt>A/V start</dt>
-      <dd class:debug__warn={Math.abs(snapshot.avOffset || 0) > 0.25}>
-        {snapshot.avOffset ?? '—'}
-      </dd>
-
-      <dt>predicted</dt>
-      <dd class:debug__warn={Math.abs(snapshot.predictedCorrection || 0) > 0.25}>
-        {snapshot.predictedCorrection ?? '—'}s
+      <dt>stall total</dt>
+      <dd class:debug__warn={(snapshot.totalStall || 0) > 0.25}>
+        {snapshot.totalStall ?? 0}s
       </dd>
 
       <dt>cue</dt>
@@ -310,6 +322,8 @@
         </dd>
         <dt>frag drift (rel.)</dt>
         <dd>{snapshot.hlsOffset ?? '—'}</dd>
+        <dt>init PTS</dt>
+        <dd>{snapshot.mediaPTS ?? '—'}</dd>
         <dt>visibility</dt>
         <dd>{snapshot.hidden ? 'hidden' : 'visible'}</dd>
       {/if}
