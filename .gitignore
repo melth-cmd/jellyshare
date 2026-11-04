@@ -43,9 +43,5 @@ web/.preview/
 # Local database dumps
 /.backups/
 
-# Generated subtitle-sync test clips (scripts/make-sync-clip.sh)
-/.sync-clips/
-
-# Local working notes (not part of the public repo)
+# Local security sweep notes (not part of the public repo)
 securitycheck.md
-phase0.md

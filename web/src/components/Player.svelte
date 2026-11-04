@@ -2,7 +2,6 @@
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import Hls from 'hls.js';
   import PlayIcon from './PlayIcon.svelte';
-  import PlayerDebug from './PlayerDebug.svelte';
   import { fullscreenElement, enterFullscreen, exitFullscreen } from '../fullscreen.js';
   import { t } from '../i18n/index.js';
 
@@ -32,25 +31,6 @@
   const sessionId = playbackData?.sessionId;
   // Same reasoning: progress belongs to the item this instance was opened for.
   const itemKey = progressKey;
-
-  // Diagnostics are opt-in and off by default: ?debug=1 for a one-off look, or
-  // localStorage.jellyshareDebug=1 so a TV or phone can be switched on without
-  // editing the link. When it is off, PlayerDebug is never created.
-  const debugEnabled = (() => {
-    try {
-      return new URLSearchParams(window.location.search).get('debug') === '1'
-        || localStorage.getItem('jellyshareDebug') === '1';
-    } catch {
-      return false;
-    }
-  })();
-  // Which playback path is running; the overlay says so, since the same file
-  // behaves differently under hls.js and a browser's native HLS.
-  let playerMode = 'hls';
-  // The first raw media timestamp hls.js saw, before it re-based the timeline
-  // to 0. This is the only client-side number that reveals a server-side PTS
-  // offset: everything else on the overlay is relative to it.
-  let initPTS = {};
 
   // The card offering the next episode appears this long before the end.
   const NEXT_UP_SECONDS = 30;
@@ -250,7 +230,6 @@
     const nativeHls = !!videoElement.canPlayType('application/vnd.apple.mpegurl');
 
     if (Hls.isSupported() && !(hasAirPlay && nativeHls)) {
-      playerMode = 'hls';
       hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
@@ -259,17 +238,6 @@
         // segments, which would fetch and throw away the opening of the file.
         startPosition: startPosition > 0 ? startPosition : -1
       });
-
-      if (debugEnabled) {
-        hls.on(Hls.Events.INIT_PTS_FOUND, (event, data) => {
-          const seconds = Number(data.initPTS) / Number(data.timescale);
-          if (!Number.isFinite(seconds)) return;
-          initPTS = {
-            ...initPTS,
-            [data.id]: { seconds, fragStart: data.frag?.start ?? null }
-          };
-        });
-      }
 
       hls.loadSource(playbackData.playbackUrl);
       hls.attachMedia(videoElement);
@@ -325,7 +293,6 @@
       });
     } else if (nativeHls) {
       // Native HLS: Safari, and the path that keeps AirPlay available
-      playerMode = 'native';
       videoElement.src = playbackData.playbackUrl;
       videoElement.addEventListener('loadedmetadata', () => {
         if (startPosition > 0) videoElement.currentTime = startPosition;
@@ -637,12 +604,6 @@
       </aside>
     {/if}
   </div>
-
-  {#if debugEnabled}
-    <PlayerDebug {sessionId} {startPosition} mode={playerMode}
-                 getVideo={() => videoElement} getHls={() => hls}
-                 getInitPTS={() => initPTS} />
-  {/if}
 </div>
 
 <style>
