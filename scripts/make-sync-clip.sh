@@ -150,6 +150,15 @@ publish "Sync Fps Mismatch (2026)" "23.976 fps video, 25 fps timings" "$WORK/bas
 write_srt "$LIBRARY/Sync Fps Mismatch (2026)/Sync Fps Mismatch (2026).en.srt" "$DURATION" \
   "$(awk 'BEGIN { printf "%.9f", 25 / (24000 / 1001) }')"
 
+# HEVC forces Jellyfin to re-encode the video for a browser that negotiated
+# H.264, which is the path the field reports point at. Everything else about
+# the clip is identical, so a difference here is the transcode.
+"$FFMPEG" -hide_banner -loglevel error -y -i "$WORK/base-24000.mp4" \
+  -c:v libx265 -preset ultrafast -crf 28 -tag:v hvc1 -pix_fmt yuv420p \
+  -c:a copy "$WORK/transcode.mp4"
+publish "Sync Transcode (2026)" "HEVC source, forces a video transcode" "$WORK/transcode.mp4"
+write_srt "$LIBRARY/Sync Transcode (2026)/Sync Transcode (2026).en.srt" "$DURATION"
+
 # Embedded subtitle in MKV: the same cues, but Jellyfin has to render them.
 mkdir -p "$LIBRARY/Sync Embedded (2026)"
 cp "$WORK/base-24000.mp4" "$WORK/embedded.mkv"
