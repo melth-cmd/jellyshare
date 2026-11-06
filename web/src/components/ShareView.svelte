@@ -1113,6 +1113,7 @@
               {startPosition}
               nextUp={nextUpCard}
               progressKey={currentEpisodeId || MAIN}
+              subtitleOffsetKey={`${token}:${currentEpisodeId || MAIN}:${selectedSubtitleIndex ?? 'none'}`}
               {playsLeft}
               onProgress={recordProgress}
               on:close={() => handlePlayerClose()} on:ended={handlePlaybackEnded}

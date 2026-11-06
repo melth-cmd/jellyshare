@@ -2,6 +2,19 @@
 
 ## Current status
 
+2026-11-06
+
+- Added viewer-side subtitle timing to the link player. A text sidecar can be
+  shifted by ±30 seconds in 0.2s steps, with the value kept per share, item and
+  subtitle track in the browser. It is a manual bandaid for sidecar drift; no
+  video re-encode and no server-side session field.
+- Added the timing panel to the player header, with keyboard shortcuts and a
+  compact phone layout. Verified with the frontend build and a Playwright check
+  on a 390x844 viewport: cues shift and reset, the value persists across reopening
+  the player, and the panel stays clear of the bottom of the screen.
+- Dev share links point at the local host again; the production instance stays
+  on `https://jellyshare.melth.top`.
+
 2026-11-03
 
 - Public repo and GHCR package; history rewritten to drop the pre-public

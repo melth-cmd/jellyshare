@@ -167,6 +167,11 @@ export default {
   'player.revoked': 'แอดมินปิดลิงก์นี้แล้ว',
   'player.expired': 'ลิงก์นี้หมดอายุแล้ว',
   'player.terminated': 'การรับชมนี้สิ้นสุดลง',
+  'player.subtitleTiming': 'จังหวะคำบรรยาย',
+  'player.subtitleEarlier': 'คำบรรยายเร็วขึ้น',
+  'player.subtitleLater': 'คำบรรยายช้าลง',
+  'player.subtitleReset': 'รีเซ็ต',
+  'player.subtitleHint': 'ค่าบวกจะแสดงคำบรรยายช้าลง',
 
   'cast.airplayHint': 'หากต้องการรับชมบนทีวี ให้เริ่มเล่นแล้วเลือก AirPlay ในเครื่องเล่น',
   'cast.chromeHint': 'หากต้องการรับชมบนทีวี ให้เปิดลิงก์นี้ใน Chrome หรือ Edge',

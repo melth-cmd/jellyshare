@@ -91,6 +91,18 @@ Matches `models.CreateShareRequest`:
 - Restore clears a revoke only while the link is still usable; expired or
   used-up links return `409`.
 
+## Viewer subtitle timing
+
+- When a share plays a text subtitle as a WebVTT sidecar, the player offers a
+  subtitle timing control. It shifts the cues by ±30 seconds in 0.2-second
+  steps.
+- The correction is client-side: the video stream and the saved position are
+  untouched. The value is stored in the viewer's browser per share, item and
+  subtitle track, so it survives closing and reopening the player.
+- Keyboard shortcuts are `[` (earlier), `]` (later) and `\` (reset).
+- Image subtitles burned into the picture have no sidecar, so they have no
+  timing control.
+
 ## Retention
 
 - Links are deleted once they have been expired or revoked for longer than

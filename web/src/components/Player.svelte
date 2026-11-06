@@ -4,6 +4,7 @@
   import PlayIcon from './PlayIcon.svelte';
   import { fullscreenElement, enterFullscreen, exitFullscreen } from '../fullscreen.js';
   import { t } from '../i18n/index.js';
+  import { OFFSET_STEP, OFFSET_LIMIT, clampOffset, formatOffset, shiftCues } from '../subtitleOffset.js';
 
   export let playbackData;
   export let title;
@@ -21,6 +22,9 @@
   // also runs while this instance is torn down, when events no longer arrive.
   export let onProgress = null;
   export let progressKey = null;
+  // Identifies the share, item and subtitle track, so a correction survives
+  // closing the player without leaking to another link or another track.
+  export let subtitleOffsetKey = null;
 
   const dispatch = createEventDispatcher();
 
@@ -38,6 +42,11 @@
   let videoElement;
   let hls;
   let heartbeatInterval;
+  // Subtitle timing, in seconds: positive means the cues appear later.
+  let subtitleOffset = 0;
+  let offsetOpen = false;
+  let subsyncWrap;
+  const cueBaseTimes = new WeakMap();
   // error ends playback and offers a way back. recovering is a passing condition
   // hls.js is already working through, and it clears itself once frames flow
   // again - conflating the two is what put "Playback stopped" over a film that
@@ -51,6 +60,7 @@
   let lastRecoveryAt = 0;
 
   onMount(() => {
+    subtitleOffset = storedOffset();
     initPlayer();
     startHeartbeat();
     // After autoplay this player starts inside a fullscreen page with the
@@ -58,6 +68,10 @@
     wake();
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    // Capture phase, so a click outside the panel closes it before the video's
+    // own handlers see it. (The browser's native control strip consumes its
+    // clicks without dispatching a DOM event, so those cannot close it.)
+    window.addEventListener('click', handleWindowClick, true);
     // An iPhone's native video fullscreen is not document fullscreen; the video
     // reports it on its own.
     videoElement?.addEventListener('webkitbeginfullscreen', onVideoFullscreen);
@@ -77,6 +91,7 @@
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      window.removeEventListener('click', handleWindowClick, true);
       videoElement?.removeEventListener('webkitbeginfullscreen', onVideoFullscreen);
       videoElement?.removeEventListener('webkitendfullscreen', onVideoFullscreen);
       videoElement?.removeEventListener('ended', handleEnded);
@@ -100,6 +115,71 @@
     for (let i = 0; i < tracks.length; i++) {
       if (tracks[i].kind === 'subtitles') tracks[i].mode = 'showing';
     }
+    applySubtitleOffset();
+  }
+
+  // ---- Subtitle timing ----
+  // Positive values show the cues later. The sidecar is the only thing moved:
+  // the video and the saved position are untouched.
+  function storageKey() {
+    return subtitleOffsetKey ? `jellyshare:subtitle-offset:${subtitleOffsetKey}` : null;
+  }
+
+  function storedOffset() {
+    const key = storageKey();
+    if (!key) return 0;
+    try {
+      return clampOffset(Number(localStorage.getItem(key)));
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  function setSubtitleOffset(value) {
+    subtitleOffset = clampOffset(value);
+    const key = storageKey();
+    if (key) {
+      try {
+        localStorage.setItem(key, String(subtitleOffset));
+      } catch (e) {
+        // Storage blocked: the correction lasts for this page only.
+      }
+    }
+    applySubtitleOffset();
+  }
+
+  function nudgeSubtitleOffset(delta) {
+    setSubtitleOffset(subtitleOffset + delta);
+  }
+
+  function subtitleTrack() {
+    const tracks = videoElement?.textTracks;
+    if (!tracks) return null;
+    for (let i = 0; i < tracks.length; i++) {
+      if (tracks[i].kind === 'subtitles') return tracks[i];
+    }
+    return null;
+  }
+
+  function applySubtitleOffset() {
+    shiftCues(subtitleTrack()?.cues, subtitleOffset, cueBaseTimes);
+  }
+
+  function toggleOffsetPanel() {
+    offsetOpen = !offsetOpen;
+    wake();
+  }
+
+  function closeOffsetPanel() {
+    if (!offsetOpen) return;
+    offsetOpen = false;
+    wake();
+  }
+
+  function handleWindowClick(event) {
+    if (!offsetOpen) return;
+    if (subsyncWrap?.contains(event.target)) return;
+    closeOffsetPanel();
   }
 
   // With autoplay called off on the card, the end goes back to the episodes
@@ -454,7 +534,11 @@
   function wake() {
     idle = false;
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => (idle = true), 2500);
+    // An open timing panel is being used, so the bar must not fade out from
+    // under it.
+    idleTimer = setTimeout(() => {
+      if (!offsetOpen) idle = true;
+    }, 2500);
   }
 
   function toggleFullscreen() {
@@ -467,7 +551,18 @@
     }
   }
 
+  function isTypingTarget(target) {
+    if (!(target instanceof HTMLElement)) return false;
+    const tag = target.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
+  }
+
   function handleKeydown(event) {
+    // Escape closes the timing panel before it closes the player.
+    if (event.key === 'Escape' && offsetOpen) {
+      closeOffsetPanel();
+      return;
+    }
     switch (event.key) {
       case 'Escape':
         if (!fullscreenElement() && !videoFullscreen) {
@@ -487,6 +582,18 @@
       case 'f':
       case 'F':
         toggleFullscreen();
+        break;
+      case '[':
+        if (isTypingTarget(event.target)) return;
+        nudgeSubtitleOffset(-OFFSET_STEP);
+        break;
+      case ']':
+        if (isTypingTarget(event.target)) return;
+        nudgeSubtitleOffset(OFFSET_STEP);
+        break;
+      case '\\':
+        if (isTypingTarget(event.target)) return;
+        setSubtitleOffset(0);
         break;
       case 'ArrowLeft':
         videoElement.currentTime -= 10;
@@ -518,6 +625,42 @@
     </button>
     <h2 class="player__title">{title}</h2>
     <div class="player__tools">
+      {#if playbackData?.subtitleUrl}
+        <div class="subsync" bind:this={subsyncWrap}>
+          <button class="glyph" class:glyph--active={subtitleOffset !== 0}
+                  on:click={toggleOffsetPanel}
+                  aria-haspopup="dialog"
+                  aria-expanded={offsetOpen}
+                  title={$t('player.subtitleTiming')}
+                  aria-label={$t('player.subtitleTiming')}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="14" rx="2"/>
+              <path d="M7 11h4M7 15h7M15 11h2"/>
+            </svg>
+          </button>
+          {#if offsetOpen}
+            <div class="subsync__panel" role="dialog" tabindex="-1"
+                 aria-label={$t('player.subtitleTiming')}>
+              <p class="subsync__title">{$t('player.subtitleTiming')}</p>
+              <div class="subsync__row">
+                <button class="subsync__step" on:click={() => nudgeSubtitleOffset(-OFFSET_STEP)}
+                        aria-label={$t('player.subtitleEarlier')}>−</button>
+                <output class="subsync__value" aria-live="polite">{formatOffset(subtitleOffset)}</output>
+                <button class="subsync__step" on:click={() => nudgeSubtitleOffset(OFFSET_STEP)}
+                        aria-label={$t('player.subtitleLater')}>+</button>
+              </div>
+              <input class="subsync__range" type="range"
+                     min={-OFFSET_LIMIT} max={OFFSET_LIMIT} step={OFFSET_STEP}
+                     value={subtitleOffset}
+                     on:input={(event) => setSubtitleOffset(Number(event.currentTarget.value))}
+                     aria-label={$t('player.subtitleTiming')} />
+              <p class="subsync__hint">{$t('player.subtitleHint')}</p>
+              <button class="subsync__reset" on:click={() => setSubtitleOffset(0)}
+                      disabled={subtitleOffset === 0}>{$t('player.subtitleReset')}</button>
+            </div>
+          {/if}
+        </div>
+      {/if}
       {#if ownFullscreenControl}
         <button class="glyph" on:click={toggleFullscreen}
                 title={isFullscreen ? $t('player.exitFullscreenTitle') : $t('player.fullscreenTitle')}
@@ -671,6 +814,102 @@
     display: flex;
     gap: var(--space-2xs);
     flex-shrink: 0;
+  }
+
+  /* ── Subtitle timing ───────────────────────────────────────────────────
+     A small panel anchored under the bar, not a sheet: on a phone it stays
+     clear of the picture's bottom edge, where the cues are. */
+  .subsync { position: relative; }
+
+  .glyph--active {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+  }
+
+  .subsync__panel {
+    position: absolute;
+    top: calc(100% + var(--space-xs));
+    right: 0;
+    z-index: var(--z-dropdown);
+    display: grid;
+    gap: var(--space-xs);
+    width: min(16rem, calc(100vw - 2 * var(--page-gutter)));
+    padding: var(--space-sm) var(--space-md) var(--space-md);
+    background: color-mix(in oklch, var(--color-paper-2) 92%, transparent);
+    backdrop-filter: blur(14px);
+    border: var(--rule-hair) solid var(--color-rule);
+    border-radius: var(--radius-card);
+  }
+
+  .subsync__title {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-neutral);
+  }
+
+  .subsync__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-xs);
+  }
+
+  .subsync__step {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    background: var(--color-paper-3);
+    color: var(--color-ink);
+    border: var(--rule-hair) solid var(--color-rule);
+    border-radius: var(--radius-pill);
+    font-size: var(--text-lg);
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .subsync__value {
+    flex: 1;
+    text-align: center;
+    font-family: var(--font-outlier);
+    font-size: var(--text-md);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-ink);
+  }
+
+  .subsync__range {
+    width: 100%;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+  }
+
+  .subsync__hint {
+    font-size: var(--text-xs);
+    line-height: 1.35;
+    color: var(--color-muted);
+  }
+
+  .subsync__reset {
+    justify-self: start;
+    padding: 0;
+    background: none;
+    color: var(--color-accent);
+    border: none;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .subsync__reset:disabled { color: var(--color-muted); cursor: default; }
+
+  .subsync__step:focus-visible,
+  .subsync__reset:focus-visible,
+  .subsync__range:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
   }
 
   .glyph {

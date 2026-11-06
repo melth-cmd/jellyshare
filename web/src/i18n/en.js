@@ -174,6 +174,11 @@ export default {
   'player.revoked': 'Whoever shared this link switched it off.',
   'player.expired': 'This link has expired.',
   'player.terminated': 'This viewing was ended.',
+  'player.subtitleTiming': 'Subtitle timing',
+  'player.subtitleEarlier': 'Subtitles earlier',
+  'player.subtitleLater': 'Subtitles later',
+  'player.subtitleReset': 'Reset',
+  'player.subtitleHint': 'Positive values show subtitles later.',
 
   'cast.airplayHint': 'To watch on a TV, start playing and choose AirPlay in the player.',
   'cast.chromeHint': 'To watch on a TV, open this link in Chrome or Edge.',
